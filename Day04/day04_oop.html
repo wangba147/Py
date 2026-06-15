@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 04: 面向对象编程 — Python vs C++</title>
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --bg-card: #282840;
+    --bg-code: #1a1a2e;
+    --text: #cdd6f4;
+    --text-secondary: #a6adc8;
+    --accent: #89b4fa;
+    --accent2: #a6e3a1;
+    --accent3: #fab387;
+    --accent4: #f38ba8;
+    --accent5: #cba6f7;
+    --border: #45475a;
+    --keyword: #cba6f7;
+    --string: #a6e3a1;
+    --number: #fab387;
+    --comment: #6c7086;
+    --func: #89b4fa;
+    --type: #f9e2af;
+    --op: #89dceb;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Noto Sans SC', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+
+  header {
+    text-align: center;
+    padding: 60px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  header h1 { font-size: 2.4em; color: var(--accent); margin-bottom: 10px; }
+  header .subtitle { color: var(--text-secondary); font-size: 1.1em; }
+  header .meta { margin-top: 12px; color: var(--comment); font-size: 0.9em; }
+
+  /* 目录导航 */
+  nav.toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 30px;
+    margin-bottom: 40px;
+  }
+  nav.toc h2 { color: var(--accent2); font-size: 1.2em; margin-bottom: 14px; }
+  nav.toc ol { padding-left: 24px; columns: 2; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc a { color: var(--text-secondary); text-decoration: none; transition: color 0.2s; }
+  nav.toc a:hover { color: var(--accent); }
+
+  /* 章节 */
+  section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 30px 34px;
+    margin-bottom: 28px;
+  }
+  section h2 {
+    color: var(--accent);
+    font-size: 1.6em;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+  }
+  section h3 { color: var(--accent2); font-size: 1.2em; margin: 22px 0 10px; }
+  section p { margin-bottom: 14px; color: var(--text); }
+
+  /* 对比表 */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 22px;
+    font-size: 0.92em;
+  }
+  .compare-table th {
+    background: #313155;
+    color: var(--accent5);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .compare-table td {
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    vertical-align: top;
+  }
+  .compare-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+  /* 代码块容器 */
+  .code-dual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0 22px;
+  }
+  .code-block {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .code-block .label {
+    background: #313155;
+    color: var(--accent);
+    padding: 6px 14px;
+    font-size: 0.82em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .code-block pre {
+    padding: 14px 16px;
+    margin: 0;
+    overflow-x: auto;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 0.85em;
+    line-height: 1.6;
+  }
+  pre.single {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin: 14px 0 20px;
+    overflow-x: auto;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 0.85em;
+    line-height: 1.6;
+  }
+
+  /* 语法高亮 */
+  .kw { color: var(--keyword); font-weight: bold; }
+  .st { color: var(--string); }
+  .nu { color: var(--number); }
+  .cm { color: var(--comment); font-style: italic; }
+  .fn { color: var(--func); }
+  .tp { color: var(--type); }
+  .op { color: var(--op); }
+  .de { color: var(--accent5); }
+
+  /* 提示框 */
+  .tip {
+    background: rgba(137,180,250,0.08);
+    border-left: 4px solid var(--accent);
+    padding: 14px 18px;
+    margin: 16px 0;
+    border-radius: 0 8px 8px 0;
+  }
+  .tip strong { color: var(--accent); }
+  .warn {
+    background: rgba(250,179,135,0.08);
+    border-left: 4px solid var(--accent3);
+    padding: 14px 18px;
+    margin: 16px 0;
+    border-radius: 0 8px 8px 0;
+  }
+  .warn strong { color: var(--accent3); }
+
+  /* 对比标签 */
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.78em;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+  .badge.py { background: #1e3a5f; color: #89b4fa; }
+  .badge.cpp { background: #1e3a1e; color: #a6e3a1; }
+  .badge.both { background: #3a2e1e; color: #fab387; }
+
+  /* 页脚 */
+  footer {
+    text-align: center;
+    padding: 30px;
+    color: var(--comment);
+    font-size: 0.85em;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+  footer a { color: var(--accent); }
+
+  ul, ol { padding-left: 24px; margin-bottom: 14px; }
+  li { margin-bottom: 6px; }
+  li code, p code {
+    background: rgba(203,166,247,0.12);
+    color: var(--accent5);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+
+  /* Process diagram */
+  .process-flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin: 20px 0;
+  }
+  .process-flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 18px;
+    text-align: center;
+    font-family: monospace;
+    font-size: 0.9em;
+  }
+  .process-flow .arrow { color: var(--accent3); font-size: 1.4em; align-self: center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Day 04: 面向对象编程</h1>
+  <p class="subtitle">Python <span class="badge py">PY</span> vs C++ <span class="badge cpp">C++</span> — 从类定义到设计模式</p>
+  <p class="meta">面向有 C++ 背景的开发者 · 实战导向 · 每段代码都可运行</p>
+</header>
+
+<!-- ===== 目录 ===== -->
+<nav class="toc">
+  <h2>📑 今日内容</h2>
+  <ol>
+    <li><a href="#s1">类定义：Python vs C++</a></li>
+    <li><a href="#s2">构造与析构：__init__ / __del__</a></li>
+    <li><a href="#s3">self vs this — 显式 vs 隐式</a></li>
+    <li><a href="#s4">访问控制：约定 vs 关键字</a></li>
+    <li><a href="#s5">@property — 比 getter/setter 更优雅</a></li>
+    <li><a href="#s6">继承与多重继承</a></li>
+    <li><a href="#s7">多态：鸭子类型 vs 虚函数</a></li>
+    <li><a href="#s8">魔法方法 — Python 的运算符重载</a></li>
+    <li><a href="#s9">@classmethod 和 @staticmethod</a></li>
+    <li><a href="#s10">dataclass — 比 struct 更强大</a></li>
+    <li><a href="#s11">ABC 抽象基类 vs 纯虚函数</a></li>
+    <li><a href="#s12">Mixin 模式 — 多重继承的实战用法</a></li>
+  </ol>
+</nav>
+
+<!-- ===== 1: 类定义 ===== -->
+<section id="s1">
+  <h2>1. 类定义：Python vs C++</h2>
+  <p>Python 类定义语法极其简洁，没有头文件、没有声明和定义分离、没有访问修饰符关键字。一个直观的对比：</p>
+
+  <div class="code-dual">
+    <div class="code-block">
+      <div class="label"><span class="badge py">Python</span></div>
+      <pre><span class="kw">class</span> <span class="tp">Dog</span>:
+    <span class="st">"""一个简单的 Dog 类"""</span>
+
+    species <span class="op">=</span> <span class="st">"Canis familiaris"</span>    <span class="cm"># 类属性（相当于 C++ static）</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, name, age):
+        <span class="kw">self</span>.name <span class="op">=</span> name          <span class="cm"># 实例属性，无需提前声明</span>
+        <span class="kw">self</span>.age <span class="op">=</span> age
+
+    <span class="kw">def</span> <span class="fn">bark</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="st">f"</span><span class="nu">{</span><span class="kw">self</span>.name<span class="nu">}</span><span class="st"> says Woof!"</span></pre>
+    </div>
+    <div class="code-block">
+      <div class="label"><span class="badge cpp">C++</span></div>
+      <pre><span class="cm">// dog.h</span>
+<span class="kw">#include</span> <span class="st">&lt;string&gt;</span>
+<span class="kw">class</span> <span class="tp">Dog</span> {
+<span class="kw">public</span>:
+    <span class="kw">static constexpr</span> <span class="kw">const char</span>* species <span class="op">=</span> <span class="st">"Canis familiaris"</span>;
+    Dog(std<span class="op">::</span>string name, <span class="kw">int</span> age);
+    std<span class="op">::</span>string <span class="fn">bark</span>() <span class="kw">const</span>;
+<span class="kw">private</span>:
+    std<span class="op">::</span>string name_;
+    <span class="kw">int</span> age_;
+};
+
+<span class="cm">// dog.cpp</span>
+Dog<span class="op">::</span><span class="fn">Dog</span>(std<span class="op">::</span>string name, <span class="kw">int</span> age)
+    : <span class="fn">name_</span>(std<span class="op">::</span>move(name)), <span class="fn">age_</span>(age) {}
+std<span class="op">::</span>string Dog<span class="op">::</span><span class="fn">bark</span>() <span class="kw">const</span> {
+    <span class="kw">return</span> name_ <span class="op">+</span> <span class="st">" says Woof!"</span>;
+}</pre>
+    </div>
+  </div>
+
+  <table class="compare-table">
+    <tr><th>特性</th><th><span class="badge py">Python</span></th><th><span class="badge cpp">C++</span></th></tr>
+    <tr>
+      <td>头文件</td>
+      <td>❌ 不需要</td>
+      <td>✅ .h + .cpp 分离</td>
+    </tr>
+    <tr>
+      <td>属性声明</td>
+      <td>运行时动态添加（<code>self.attr = value</code>）</td>
+      <td>编译时静态声明类型</td>
+    </tr>
+    <tr>
+      <td>成员可见性</td>
+      <td>全靠约定（<code>_</code> 前缀提示）</td>
+      <td><code>public</code> / <code>private</code> / <code>protected</code></td>
+    </tr>
+    <tr>
+      <td>类属性(static)</td>
+      <td>直接在 class 体内赋值</td>
+      <td><code>static</code> 关键字 + 类外定义</td>
+    </tr>
+    <tr>
+      <td>代码量</td>
+      <td><strong>7 行</strong></td>
+      <td><strong>~20 行（含头文件）</strong></td>
+    </tr>
+  </table>
+
+  <div class="tip">
+    <strong>💡 关键洞察：</strong>Python 的类在运行时仍然是可变对象——你可以随时给实例添加新属性。这在 C++ 中是不可想象的，因为 C++ 的对象布局在编译时就完全确定了。
+  </div>
+</section>
+
+<!-- ===== 2: 构造与析构 ===== -->
+<section id="s2">
+  <h2>2. 构造与析构：__init__ / __new__ / __del__</h2>
+
+  <table class="compare-table">
+    <tr><th>概念</th><th><span class="badge py">Python</span></th><th><span class="badge cpp">C++</span></th></tr>
+    <tr><td>构造函数</td><td><code>__init__(self)</code></td><td><code>ClassName(args)</code></td></tr>
+    <tr><td>内存分配</td><td><code>__new__(cls)</code></td><td><code>operator new</code></td></tr>
+    <tr><td>析构函数</td><td><code>__del__(self)</code></td><td><code>~ClassName()</code></td></tr>
+    <tr><td>调用时机</td><td>GC 回收时（不确定！）</td><td>离开作用域 / delete 时（确定）</td></tr>
+  </table>
+
+  <pre class="single"><span class="kw">class</span> <span class="tp">Resource</span>:
+    <span class="st">"""演示构造和析构的完整流程"""</span>
+
+    <span class="kw">def</span> <span class="fn">__new__</span>(cls, *args, **kwargs):
+        <span class="st">"""__new__ 在 __init__ 之前调用，负责创建实例</span>
+<span class="st">        一般不需要重写，除非做单例模式或不可变类型子类化"""</span>
+        <span class="fn">print</span>(<span class="st">"1. __new__: 分配内存，创建实例"</span>)
+        instance <span class="op">=</span> <span class="kw">super</span>().<span class="fn">__new__</span>(cls)
+        <span class="kw">return</span> instance
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, name):
+        <span class="st">"""__init__: 初始化实例属性。相当于 C++ 构造函数体"""</span>
+        <span class="fn">print</span>(<span class="st">f"2. __init__: 初始化 </span><span class="nu">{</span>name<span class="nu">}</span><span class="st">"</span>)
+        <span class="kw">self</span>.name <span class="op">=</span> name
+
+    <span class="kw">def</span> <span class="fn">__del__</span>(<span class="kw">self</span>):
+        <span class="st">"""__del__: 对象被 GC 回收时调用</span>
+<span class="st">        ⚠️ 调用时机不确定！不要依赖它做关键资源清理"""</span>
+        <span class="fn">print</span>(<span class="st">f"3. __del__: 回收 </span><span class="nu">{</span><span class="kw">self</span>.name<span class="nu">}</span><span class="st">"</span>)
+
+<span class="cm"># 推荐做法：用上下文管理器做资源清理</span>
+<span class="kw">class</span> <span class="tp">ManagedFile</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, path):
+        <span class="kw">self</span>.file <span class="op">=</span> <span class="fn">open</span>(path, <span class="st">'w'</span>)
+    <span class="kw">def</span> <span class="fn">__enter__</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="kw">self</span>
+    <span class="kw">def</span> <span class="fn">__exit__</span>(<span class="kw">self</span>, *args):
+        <span class="kw">self</span>.file.<span class="fn">close</span>()        <span class="cm"># 确定性的资源释放！</span>
+    <span class="kw">def</span> <span class="fn">write</span>(<span class="kw">self</span>, text):
+        <span class="kw">self</span>.file.<span class="fn">write</span>(text)</pre>
+
+  <div class="warn">
+    <strong>⚠️ Python vs C++ 最大差异：</strong>Python 的 <code>__del__</code> 不等同于 C++ 析构函数！C++ 中离开作用域就析构（RAII），Python 中 GC 何时回收你根本不知道。用 <code>with</code> 语句和上下文管理器来做确定性的资源释放。
+  </div>
+</section>
+
+<!-- ===== 3: self vs this ===== -->
+<section id="s3">
+  <h2>3. self vs this — 显式 vs 隐式</h2>
+  <p>Python 的 <code>self</code> 是<strong>显式传递</strong>的（通过方法签名），C++ 的 <code>this</code> 是<strong>隐式存在</strong>的。</p>
+
+  <div class="code-dual">
+    <div class="code-block">
+      <div class="label"><span class="badge py">Python — self 是显式参数</span></div>
+      <pre><span class="kw">class</span> <span class="tp">Counter</span>:
+    <span class="kw">def</span> <span class="fn">increment</span>(<span class="kw">self</span>, amount<span class="op">=</span><span class="nu">1</span>):
+        <span class="kw">self</span>.value <span class="op">+=</span> amount
+
+<span class="cm"># self 就是调用时的实例</span>
+c <span class="op">=</span> <span class="tp">Counter</span>()
+c.<span class="fn">increment</span>(<span class="nu">5</span>)   <span class="cm"># 等价于 Counter.increment(c, 5)</span>
+<span class="tp">Counter</span>.<span class="fn">increment</span>(c, <span class="nu">5</span>)  <span class="cm"># 完全等价！self 只是个名字</span></pre>
+    </div>
+    <div class="code-block">
+      <div class="label"><span class="badge cpp">C++ — this 是隐式指针</span></div>
+      <pre><span class="kw">class</span> <span class="tp">Counter</span> {
+    <span class="kw">int</span> value <span class="op">=</span> <span class="nu">0</span>;
+<span class="kw">public</span>:
+    <span class="kw">void</span> <span class="fn">increment</span>(<span class="kw">int</span> amount <span class="op">=</span> <span class="nu">1</span>) {
+        <span class="kw">this</span><span class="op">-&gt;</span>value <span class="op">+=</span> amount; <span class="cm">// this 通常可省略</span>
+        value <span class="op">+=</span> amount;         <span class="cm">// 隐式 this</span>
+    }
+};</pre>
+    </div>
+  </div>
+
+  <div class="tip">
+    <strong>💡 Python 的 self 只是一种约定！</strong> 你可以叫它任何名字（但别这样做）。"self" 不是关键字，而 <code>this</code> 在 C++ 中是关键字。Python 显式传递 self 的好处是：类方法和静态方法一目了然——它们没有 self 参数。
+  </div>
+</section>
+
+<!-- ===== 4: 访问控制 ===== -->
+<section id="s4">
+  <h2>4. 访问控制：约定 vs 关键字</h2>
+
+  <table class="compare-table">
+    <tr><th>可见性</th><th><span class="badge py">Python</span></th><th><span class="badge cpp">C++</span></th></tr>
+    <tr><td>公开</td><td><code>attr</code></td><td><code>public:</code></td></tr>
+    <tr><td>保护</td><td><code>_attr</code>（约定，仍可访问）</td><td><code>protected:</code>（编译器强制）</td></tr>
+    <tr><td>私有</td><td><code>__attr</code>（名称改写，仍可绕过）</td><td><code>private:</code>（编译器强制）</td></tr>
+  </table>
+
+  <pre class="single"><span class="kw">class</span> <span class="tp">AccessDemo</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>):
+        <span class="kw">self</span>.pub      <span class="op">=</span> <span class="st">"我是公开的"</span>       <span class="cm"># 相当于 C++ public</span>
+        <span class="kw">self</span>._prot    <span class="op">=</span> <span class="st">"约定保护"</span>         <span class="cm"># _ 前缀 = "请别碰我"</span>
+        <span class="kw">self</span>.__priv   <span class="op">=</span> <span class="st">"名称改写伪私有"</span>  <span class="cm"># __ 前缀触发名称改写 (name mangling)</span>
+
+a <span class="op">=</span> <span class="tp">AccessDemo</span>()
+<span class="fn">print</span>(a.pub)             <span class="cm"># ✅ 正常访问</span>
+<span class="fn">print</span>(a._prot)           <span class="cm"># ⚠️ 能访问，但 IDE 会警告你</span>
+<span class="cm"># print(a.__priv)         # ❌ AttributeError</span>
+<span class="fn">print</span>(a.<span class="fn">_AccessDemo__priv</span>)  <span class="cm"># 😈 绕过名称改写！Python 的"私有"不是真正的私有</span></pre>
+
+  <div class="tip">
+    <strong>💡 Python 哲学："We're all consenting adults here."</strong> Python 社区信任开发者，用约定而非强制来控制访问。C++ 开发者初学时可能不适应，但在 Python 中这简化了大量样板代码。
+  </div>
+</section>
+
+<!-- ===== 5: @property ===== -->
+<section id="s5">
+  <h2>5. @property — 比 getter/setter 更优雅</h2>
+  <p>C++ 中需要写 <code>getXxx()</code> / <code>setXxx()</code>，Python 用 <code>@property</code> 装饰器让属性访问像普通属性一样自然，背后却有逻辑控制。</p>
+
+  <div class="code-dual">
+    <div class="code-block">
+      <div class="label"><span class="badge py">Python — @property</span></div>
+      <pre><span class="kw">class</span> <span class="tp">Temperature</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, celsius<span class="op">=</span><span class="nu">0</span>):
+        <span class="kw">self</span>._celsius <span class="op">=</span> celsius
+
+    <span class="de">@property</span>
+    <span class="kw">def</span> <span class="fn">celsius</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="kw">self</span>._celsius
+
+    <span class="de">@celsius.setter</span>
+    <span class="kw">def</span> <span class="fn">celsius</span>(<span class="kw">self</span>, value):
+        <span class="kw">if</span> value <span class="op">&lt;</span> <span class="op">-</span><span class="nu">273.15</span>:
+            <span class="kw">raise</span> <span class="tp">ValueError</span>(<span class="st">"低于绝对零度"</span>)
+        <span class="kw">self</span>._celsius <span class="op">=</span> value
+
+    <span class="de">@property</span>
+    <span class="kw">def</span> <span class="fn">fahrenheit</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="kw">self</span>._celsius <span class="op">*</span> <span class="nu">9</span><span class="op">/</span><span class="nu">5</span> <span class="op">+</span> <span class="nu">32</span>
+
+<span class="cm"># 使用起来像普通属性</span>
+t <span class="op">=</span> <span class="tp">Temperature</span>(<span class="nu">25</span>)
+t.celsius <span class="op">=</span> <span class="nu">30</span>          <span class="cm"># 触发 setter 验证</span>
+<span class="fn">print</span>(t.fahrenheit)     <span class="cm"># 86.0 — 只读计算属性</span></pre>
+    </div>
+    <div class="code-block">
+      <div class="label"><span class="badge cpp">C++ — getter/setter</span></div>
+      <pre><span class="kw">class</span> <span class="tp">Temperature</span> {
+    <span class="kw">double</span> celsius_ <span class="op">=</span> <span class="nu">0</span>;
+<span class="kw">public</span>:
+    <span class="kw">double</span> <span class="fn">getCelsius</span>() <span class="kw">const</span> {
+        <span class="kw">return</span> celsius_;
+    }
+    <span class="kw">void</span> <span class="fn">setCelsius</span>(<span class="kw">double</span> val) {
+        <span class="kw">if</span> (val <span class="op">&lt;</span> <span class="op">-</span><span class="nu">273.15</span>)
+            <span class="kw">throw</span> std<span class="op">::</span>invalid_argument(<span class="st">"..."</span>);
+        celsius_ <span class="op">=</span> val;
+    }
+    <span class="kw">double</span> <span class="fn">getFahrenheit</span>() <span class="kw">const</span> {
+        <span class="kw">return</span> celsius_ <span class="op">*</span> <span class="nu">9</span><span class="op">/</span><span class="nu">5</span> <span class="op">+</span> <span class="nu">32</span>;
+    }
+};
+
+<span class="cm">// 使用时：get/set 方法调用</span>
+Temperature t;
+t.<span class="fn">setCelsius</span>(<span class="nu">30</span>);
+<span class="kw">auto</span> f <span class="op">=</span> t.<span class="fn">getFahrenheit</span>();</pre>
+    </div>
+  </div>
+
+  <div class="tip">
+    <strong>💡 为什么重要：</strong>Python 的 <code>@property</code> 让你可以从简单属性起步，将来需要验证逻辑时无缝升级——不影响已有调用代码。C++ 中如果一开始用公有成员变量，后来改成 getter/setter，所有调用方都得改。
+  </div>
+</section>
+
+<!-- ===== 6: 继承 ===== -->
+<section id="s6">
+  <h2>6. 继承与多重继承</h2>
+
+  <h3>6.1 单继承</h3>
+  <div class="code-dual">
+    <div class="code-block">
+      <div class="label"><span class="badge py">Python</span></div>
+      <pre><span class="kw">class</span> <span class="tp">Animal</span>:
+    <span class="kw">def</span> <span class="fn">speak</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="st">"..."</span>
+
+<span class="kw">class</span> <span class="tp">Dog</span>(<span class="tp">Animal</span>):          <span class="cm"># 继承语法简洁</span>
+    <span class="kw">def</span> <span class="fn">speak</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="st">"Woof!"</span>
+
+<span class="kw">class</span> <span class="tp">Cat</span>(<span class="tp">Animal</span>):
+    <span class="kw">def</span> <span class="fn">speak</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="st">"Meow!"</span>
+
+<span class="cm"># super() 自动处理 MRO</span>
+<span class="kw">class</span> <span class="tp">Puppy</span>(<span class="tp">Dog</span>):
+    <span class="kw">def</span> <span class="fn">speak</span>(<span class="kw">self</span>):
+        parent <span class="op">=</span> <span class="kw">super</span>().<span class="fn">speak</span>()
+        <span class="kw">return</span> <span class="st">f"</span><span class="nu">{</span>parent<span class="nu">}</span><span class="st"> (cute)"</span></pre>
+    </div>
+    <div class="code-block">
+      <div class="label"><span class="badge cpp">C++</span></div>
+      <pre><span class="kw">class</span> <span class="tp">Animal</span> {
+<span class="kw">public</span>:
+    <span class="kw">virtual</span> std<span class="op">::</span>string <span class="fn">speak</span>() {
+        <span class="kw">return</span> <span class="st">"..."</span>;
+    }
+    <span class="kw">virtual</span> <span class="op">~</span>Animal() <span class="op">=</span> <span class="kw">default</span>;
+};
+
+<span class="kw">class</span> <span class="tp">Dog</span> : <span class="kw">public</span> Animal {
+<span class="kw">public</span>:
+    std<span class="op">::</span>string <span class="fn">speak</span>() <span class="kw">override</span> {
+        <span class="kw">return</span> <span class="st">"Woof!"</span>;
+    }
+};
+
+<span class="kw">class</span> <span class="tp">Cat</span> : <span class="kw">public</span> Animal {
+<span class="kw">public</span>:
+    std<span class="op">::</span>string <span class="fn">speak</span>() <span class="kw">override</span> {
+        <span class="kw">return</span> <span class="st">"Meow!"</span>;
+    }
+};</pre>
+    </div>
+  </div>
+
+  <h3>6.2 多重继承与 MRO</h3>
+  <p>Python 支持多重继承，使用 <strong>C3 线性化算法</strong>（MRO — Method Resolution Order）来决定方法查找顺序。</p>
+
+  <pre class="single"><span class="kw">class</span> <span class="tp">A</span>:
+    <span class="kw">def</span> <span class="fn">method</span>(<span class="kw">self</span>):
+        <span class="fn">print</span>(<span class="st">"A"</span>)
+
+<span class="kw">class</span> <span class="tp">B</span>(<span class="tp">A</span>):
+    <span class="kw">def</span> <span class="fn">method</span>(<span class="kw">self</span>):
+        <span class="kw">super</span>().<span class="fn">method</span>()     <span class="cm"># super() 按 MRO 查找下一个</span>
+        <span class="fn">print</span>(<span class="st">"B"</span>)
+
+<span class="kw">class</span> <span class="tp">C</span>(<span class="tp">A</span>):
+    <span class="kw">def</span> <span class="fn">method</span>(<span class="kw">self</span>):
+        <span class="kw">super</span>().<span class="fn">method</span>()
+        <span class="fn">print</span>(<span class="st">"C"</span>)
+
+<span class="kw">class</span> <span class="tp">D</span>(<span class="tp">B</span>, <span class="tp">C</span>):       <span class="cm"># 菱形继承！</span>
+    <span class="kw">def</span> <span class="fn">method</span>(<span class="kw">self</span>):
+        <span class="kw">super</span>().<span class="fn">method</span>()     <span class="cm"># 按 MRO 调用：D→B→C→A</span>
+        <span class="fn">print</span>(<span class="st">"D"</span>)
+
+<span class="fn">print</span>(D.<span class="fn">__mro__</span>)        <span class="cm"># (D, B, C, A, object)</span>
+D().<span class="fn">method</span>()            <span class="cm"># 输出: A → C → B → D</span>
+
+<span class="cm"># C++ 的菱形继承需要 virtual 继承（虚基类），复杂得多</span></pre>
+
+  <div class="warn">
+    <strong>⚠️ 对比 C++ 菱形继承：</strong>Python 的 MRO 自动处理菱形继承，A 不会被调用两次。C++ 需要用 <code>virtual</code> 继承来避免重复基类问题，而且构造顺序更复杂。
+  </div>
+</section>
+
+<!-- ===== 7: 多态 ===== -->
+<section id="s7">
+  <h2>7. 多态：鸭子类型 vs 虚函数</h2>
+  <p>这是 Python 和 C++ 面向对象哲学差异最大的地方。</p>
+
+  <table class="compare-table">
+    <tr><th>方面</th><th><span class="badge py">Python — 鸭子类型</span></th><th><span class="badge cpp">C++ — 静态类型</span></th></tr>
+    <tr><td>多态基础</td><td>"如果它走起来像鸭子，叫起来像鸭子，它就是鸭子"</td><td>通过继承和虚函数表（vtable）</td></tr>
+    <tr><td>类型检查</td><td>运行时（动态）</td><td>编译时（静态）</td></tr>
+    <tr><td>接口约束</td><td>无（靠约定和文档）</td><td><code>virtual</code> / <code>abstract</code></td></tr>
+    <tr><td>是否必须继承</td><td>❌ 不需要共同基类</td><td>✅ 必须有共同基类（或模板）</td></tr>
+  </table>
+
+  <div class="code-dual">
+    <div class="code-block">
+      <div class="label"><span class="badge py">Python — 鸭子类型</span></div>
+      <pre><span class="kw">class</span> <span class="tp">Dog</span>:
+    <span class="kw">def</span> <span class="fn">speak</span>(<span class="kw">self</span>): <span class="kw">return</span> <span class="st">"Woof"</span>
+    <span class="kw">def</span> <span class="fn">walk</span>(<span class="kw">self</span>):  <span class="kw">return</span> <span class="st">"四脚走"</span>
+
+<span class="kw">class</span> <span class="tp">Duck</span>:
+    <span class="kw">def</span> <span class="fn">speak</span>(<span class="kw">self</span>): <span class="kw">return</span> <span class="st">"Quack"</span>
+    <span class="kw">def</span> <span class="fn">walk</span>(<span class="kw">self</span>):  <span class="kw">return</span> <span class="st">"摇摆走"</span>
+
+<span class="kw">class</span> <span class="tp">Robot</span>:
+    <span class="kw">def</span> <span class="fn">speak</span>(<span class="kw">self</span>): <span class="kw">return</span> <span class="st">"Beep"</span>
+    <span class="kw">def</span> <span class="fn">walk</span>(<span class="kw">self</span>):  <span class="kw">return</span> <span class="st">"滚动"</span>
+
+<span class="cm"># 不需要共同基类！只要实现了 speak + walk 就行</span>
+<span class="kw">def</span> <span class="fn">make_parade</span>(animals):
+    <span class="kw">for</span> a <span class="kw">in</span> animals:
+        <span class="fn">print</span>(<span class="st">f"</span><span class="nu">{</span>a.<span class="fn">speak</span>()<span class="nu">}</span><span class="st"> — </span><span class="nu">{</span>a.<span class="fn">walk</span>()<span class="nu">}</span><span class="st">"</span>)
+
+<span class="fn">make_parade</span>([<span class="tp">Dog</span>(), <span class="tp">Duck</span>(), <span class="tp">Robot</span>()])</pre>
+    </div>
+    <div class="code-block">
+      <div class="label"><span class="badge cpp">C++ — 虚函数多态</span></div>
+      <pre><span class="kw">class</span> <span class="tp">Animal</span> {
+<span class="kw">public</span>:
+    <span class="kw">virtual</span> std<span class="op">::</span>string <span class="fn">speak</span>() <span class="op">=</span> <span class="nu">0</span>;
+    <span class="kw">virtual</span> std<span class="op">::</span>string <span class="fn">walk</span>() <span class="op">=</span> <span class="nu">0</span>;
+    <span class="kw">virtual</span> <span class="op">~</span>Animal() <span class="op">=</span> <span class="kw">default</span>;
+};
+
+<span class="kw">class</span> <span class="tp">Dog</span> : <span class="kw">public</span> Animal {
+    std<span class="op">::</span>string <span class="fn">speak</span>() <span class="kw">override</span>
+        { <span class="kw">return</span> <span class="st">"Woof"</span>; }
+    std<span class="op">::</span>string <span class="fn">walk</span>() <span class="kw">override</span>
+        { <span class="kw">return</span> <span class="st">"四脚走"</span>; }
+};
+<span class="kw">class</span> <span class="tp">Duck</span> : <span class="kw">public</span> Animal { <span class="cm">/* ... */</span> };
+<span class="kw">class</span> <span class="tp">Robot</span> : <span class="kw">public</span> Animal { <span class="cm">/* ??? */</span> };
+
+<span class="kw">void</span> <span class="fn">make_parade</span>(
+    <span class="kw">const</span> vector<span class="op">&lt;</span>Animal<span class="op">*&gt;&amp;</span> animals) {
+    <span class="kw">for</span> (<span class="kw">auto</span>* a : animals)
+        cout <span class="op">&lt;&lt;</span> a<span class="op">-&gt;</span>speak() <span class="op">&lt;&lt;</span> <span class="st">" — "</span>;
+}
+<span class="cm">// Robot 被迫继承 Animal——语义上很奇怪！</span></pre>
+    </div>
+  </div>
+
+  <p>Python 也支持更严格的接口约束（见 <a href="#s11">§11 ABC</a>），但日常开发中鸭子类型更 Pythonic。</p>
+</section>
+
+<!-- ===== 8: 魔法方法 ===== -->
+<section id="s8">
+  <h2>8. 魔法方法 — Python 的运算符重载</h2>
+  <p>Python 通过双下划线方法（dunder methods）实现运算符重载，相当于 C++ 的 <code>operator+</code>、<code>operator==</code> 等。</p>
+
+  <table class="compare-table">
+    <tr><th>操作</th><th><span class="badge py">Python 魔法方法</span></th><th><span class="badge cpp">C++ 运算符重载</span></th></tr>
+    <tr><td>构造/析构</td><td><code>__init__</code> / <code>__del__</code></td><td>构造/析构函数</td></tr>
+    <tr><td>字符串化</td><td><code>__str__</code> / <code>__repr__</code></td><td><code>operator&lt;&lt;</code> (friend)</td></tr>
+    <tr><td>相等比较</td><td><code>__eq__</code></td><td><code>operator==</code></td></tr>
+    <tr><td>加法</td><td><code>__add__</code></td><td><code>operator+</code></td></tr>
+    <tr><td>索引访问</td><td><code>__getitem__</code></td><td><code>operator[]</code></td></tr>
+    <tr><td>调用</td><td><code>__call__</code></td><td><code>operator()</code></td></tr>
+    <tr><td>上下文管理</td><td><code>__enter__</code> / <code>__exit__</code></td><td>构造/析构 (RAII)</td></tr>
+    <tr><td>迭代</td><td><code>__iter__</code> / <code>__next__</code></td><td><code>begin()</code> / <code>end()</code></td></tr>
+    <tr><td>长度</td><td><code>__len__</code></td><td><code>size()</code> 方法</td></tr>
+    <tr><td>布尔</td><td><code>__bool__</code></td><td><code>operator bool</code></td></tr>
+    <tr><td>属性缺失</td><td><code>__getattr__</code> / <code>__setattr__</code></td><td>❌ 无直接对应</td></tr>
+  </table>
+
+  <pre class="single"><span class="kw">class</span> <span class="tp">Vector3D</span>:
+    <span class="st">"""3D 向量 — 演示常用魔法方法，对标 C++ operator 重载"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, x, y, z):
+        <span class="kw">self</span>.x, <span class="kw">self</span>.y, <span class="kw">self</span>.z <span class="op">=</span> x, y, z
+
+    <span class="kw">def</span> <span class="fn">__repr__</span>(<span class="kw">self</span>):            <span class="cm"># 调试信息，eval(repr(obj)) 应重建对象</span>
+        <span class="kw">return</span> <span class="st">f"Vector3D(</span><span class="nu">{</span><span class="kw">self</span>.x<span class="nu">}</span><span class="st">, </span><span class="nu">{</span><span class="kw">self</span>.y<span class="nu">}</span><span class="st">, </span><span class="nu">{</span><span class="kw">self</span>.z<span class="nu">}</span><span class="st">)"</span>
+
+    <span class="kw">def</span> <span class="fn">__str__</span>(<span class="kw">self</span>):             <span class="cm"># 用户友好，print() / str() 调用</span>
+        <span class="kw">return</span> <span class="st">f"Vector3D(</span><span class="nu">{</span><span class="kw">self</span>.x<span class="nu">}</span><span class="st">, </span><span class="nu">{</span><span class="kw">self</span>.y<span class="nu">}</span><span class="st">, </span><span class="nu">{</span><span class="kw">self</span>.z<span class="nu">}</span><span class="st">)"</span>
+
+    <span class="kw">def</span> <span class="fn">__eq__</span>(<span class="kw">self</span>, other):       <span class="cm"># operator==</span>
+        <span class="kw">if</span> <span class="kw">not</span> <span class="fn">isinstance</span>(other, Vector3D):
+            <span class="kw">return</span> <span class="tp">NotImplemented</span>
+        <span class="kw">return</span> (<span class="kw">self</span>.x, <span class="kw">self</span>.y, <span class="kw">self</span>.z) <span class="op">==</span> (other.x, other.y, other.z)
+
+    <span class="kw">def</span> <span class="fn">__add__</span>(<span class="kw">self</span>, other):      <span class="cm"># operator+</span>
+        <span class="kw">return</span> <span class="tp">Vector3D</span>(<span class="kw">self</span>.x <span class="op">+</span> other.x, <span class="kw">self</span>.y <span class="op">+</span> other.y, <span class="kw">self</span>.z <span class="op">+</span> other.z)
+
+    <span class="kw">def</span> <span class="fn">__sub__</span>(<span class="kw">self</span>, other):      <span class="cm"># operator-</span>
+        <span class="kw">return</span> <span class="tp">Vector3D</span>(<span class="kw">self</span>.x <span class="op">-</span> other.x, <span class="kw">self</span>.y <span class="op">-</span> other.y, <span class="kw">self</span>.z <span class="op">-</span> other.z)
+
+    <span class="kw">def</span> <span class="fn">__abs__</span>(<span class="kw">self</span>):             <span class="cm"># operator norm</span>
+        <span class="kw">return</span> (<span class="kw">self</span>.x<span class="op">**</span><span class="nu">2</span> <span class="op">+</span> <span class="kw">self</span>.y<span class="op">**</span><span class="nu">2</span> <span class="op">+</span> <span class="kw">self</span>.z<span class="op">**</span><span class="nu">2</span>) <span class="op">**</span> <span class="nu">0.5</span>
+
+    <span class="kw">def</span> <span class="fn">__getitem__</span>(<span class="kw">self</span>, idx):   <span class="cm"># operator[]</span>
+        <span class="kw">return</span> (<span class="kw">self</span>.x, <span class="kw">self</span>.y, <span class="kw">self</span>.z)[idx]
+
+    <span class="kw">def</span> <span class="fn">__bool__</span>(<span class="kw">self</span>):           <span class="cm"># operator bool</span>
+        <span class="kw">return</span> <span class="fn">abs</span>(<span class="kw">self</span>) <span class="op">&gt;</span> <span class="nu">0</span>
+
+<span class="cm"># 使用：和 C++ 重载运算符一样自然</span>
+v1 <span class="op">=</span> <span class="tp">Vector3D</span>(<span class="nu">1</span>, <span class="nu">2</span>, <span class="nu">3</span>)
+v2 <span class="op">=</span> <span class="tp">Vector3D</span>(<span class="nu">4</span>, <span class="nu">5</span>, <span class="nu">6</span>)
+<span class="fn">print</span>(v1 <span class="op">+</span> v2)                <span class="cm"># Vector3D(5, 7, 9)</span>
+<span class="fn">print</span>(v1 <span class="op">==</span> v2)               <span class="cm"># False</span>
+<span class="fn">print</span>(v1[<span class="nu">1</span>])                 <span class="cm"># 2</span>
+<span class="fn">print</span>(<span class="fn">bool</span>(v1))              <span class="cm"># True</span></pre>
+</section>
+
+<!-- ===== 9: @classmethod/@staticmethod ===== -->
+<section id="s9">
+  <h2>9. @classmethod 和 @staticmethod</h2>
+
+  <table class="compare-table">
+    <tr><th>装饰器</th><th>第一个参数</th><th>可以访问</th><th><span class="badge cpp">C++ 等价物</span></th></tr>
+    <tr><td>普通方法</td><td><code>self</code>（实例）</td><td>实例 + 类属性</td><td>普通成员函数</td></tr>
+    <tr><td><code>@classmethod</code></td><td><code>cls</code>（类本身）</td><td>类属性，不能访问实例</td><td>静态成员函数（但有类引用）</td></tr>
+    <tr><td><code>@staticmethod</code></td><td>无特殊参数</td><td>不能直接访问类/实例</td><td><code>static</code> 成员函数</td></tr>
+  </table>
+
+  <pre class="single"><span class="kw">class</span> <span class="tp">BuildConfig</span>:
+    <span class="st">"""C++ 项目构建配置 —— 演示三种方法类型"""</span>
+
+    default_compiler <span class="op">=</span> <span class="st">"g++"</span>       <span class="cm"># 类属性</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, project_name):
+        <span class="kw">self</span>.project_name <span class="op">=</span> project_name
+
+    <span class="cm"># 普通方法：最常见，操作实例数据</span>
+    <span class="kw">def</span> <span class="fn">build</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="st">f"构建 </span><span class="nu">{</span><span class="kw">self</span>.project_name<span class="nu">}</span><span class="st"> 使用 </span><span class="nu">{</span><span class="kw">self</span>.default_compiler<span class="nu">}</span><span class="st">"</span>
+
+    <span class="de">@classmethod</span>
+    <span class="kw">def</span> <span class="fn">from_cmake</span>(cls, cmake_file):
+        <span class="st">"""替代构造器：从 CMakeLists.txt 解析项目名</span>
+<span class="st">        cls 是 BuildConfig 类本身"""</span>
+        <span class="kw">import</span> re
+        content <span class="op">=</span> <span class="fn">open</span>(cmake_file).<span class="fn">read</span>()
+        name <span class="op">=</span> re.<span class="fn">search</span>(<span class="st">r'project\((.+?)\)'</span>, content)
+        <span class="kw">return</span> <span class="fn">cls</span>(name.<span class="fn">group</span>(<span class="nu">1</span>))  <span class="cm"># cls() 创建实例</span>
+
+    <span class="de">@staticmethod</span>
+    <span class="kw">def</span> <span class="fn">is_valid_target</span>(target):
+        <span class="st">"""工具函数：不和类/实例绑定，纯逻辑"""</span>
+        valid <span class="op">=</span> {<span class="st">'debug'</span>, <span class="st">'release'</span>, <span class="st">'relwithdebinfo'</span>}
+        <span class="kw">return</span> target <span class="kw">in</span> valid
+
+<span class="cm"># 使用三种方法</span>
+cfg <span class="op">=</span> <span class="tp">BuildConfig</span>(<span class="st">"MyEngine"</span>)
+<span class="fn">print</span>(cfg.<span class="fn">build</span>())                          <span class="cm"># 普通方法</span>
+cfg2 <span class="op">=</span> BuildConfig.<span class="fn">from_cmake</span>(<span class="st">"CMakeLists.txt"</span>)  <span class="cm"># 类方法作为工厂</span>
+<span class="fn">print</span>(BuildConfig.<span class="fn">is_valid_target</span>(<span class="st">"debug"</span>))     <span class="cm"># 静态方法，无需实例</span></pre>
+</section>
+
+<!-- ===== 10: dataclass ===== -->
+<section id="s10">
+  <h2>10. dataclass — 比 struct 更强大</h2>
+  <p><code>@dataclass</code> 是 Python 3.7+ 引入的装饰器，自动生成 <code>__init__</code>、<code>__repr__</code>、<code>__eq__</code> 等方法。<strong>它是 C++ struct 的精神继承者，但更灵活。</strong></p>
+
+  <div class="code-dual">
+    <div class="code-block">
+      <div class="label"><span class="badge py">Python dataclass</span></div>
+      <pre><span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">from</span> typing <span class="kw">import</span> List
+
+<span class="de">@dataclass</span>
+<span class="kw">class</span> <span class="tp">CppProject</span>:
+    <span class="st">"""C++ 项目描述 —— 自动生成 __init__/__repr__/__eq__"""</span>
+    name: str
+    sources: List[str] <span class="op">=</span> <span class="fn">field</span>(default_factory<span class="op">=</span><span class="kw">list</span>)
+    cpp_standard: str <span class="op">=</span> <span class="st">"c++17"</span>     <span class="cm"># 有默认值的字段放后面</span>
+    use_precompiled: bool <span class="op">=</span> <span class="kw">True</span>
+
+    <span class="kw">def</span> <span class="fn">cmake_minimum</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> str:   <span class="cm"># 可以有方法！</span>
+        std <span class="op">=</span> <span class="kw">self</span>.cpp_standard.<span class="fn">replace</span>(<span class="st">'c++'</span>, <span class="st">''</span>)
+        <span class="kw">return</span> <span class="st">f"cmake_minimum_required(VERSION 3.{std})"</span>
+
+p1 <span class="op">=</span> <span class="tp">CppProject</span>(<span class="st">"Engine"</span>, [<span class="st">"a.cpp"</span>])
+p2 <span class="op">=</span> <span class="tp">CppProject</span>(<span class="st">"Engine"</span>, [<span class="st">"a.cpp"</span>])
+<span class="fn">print</span>(p1 <span class="op">==</span> p2)            <span class="cm"># True — 自动 __eq__</span>
+<span class="fn">print</span>(p1)                <span class="cm"># CppProject(name='Engine',...)</span></pre>
+    </div>
+    <div class="code-block">
+      <div class="label"><span class="badge cpp">C++ struct</span></div>
+      <pre><span class="kw">#include</span> <span class="st">&lt;string&gt;</span>
+<span class="kw">#include</span> <span class="st">&lt;vector&gt;</span>
+
+<span class="kw">struct</span> <span class="tp">CppProject</span> {
+    std<span class="op">::</span>string name;
+    std<span class="op">::</span>vector<span class="op">&lt;</span>std<span class="op">::</span>string<span class="op">&gt;</span> sources;
+    std<span class="op">::</span>string cpp_standard <span class="op">=</span> <span class="st">"c++17"</span>;
+    <span class="kw">bool</span> use_precompiled <span class="op">=</span> <span class="kw">true</span>;
+
+    <span class="kw">auto</span> <span class="kw">operator</span><span class="op">==</span>(<span class="kw">const</span> CppProject<span class="op">&amp;</span>) <span class="kw">const</span> <span class="op">=</span> <span class="kw">default</span>; <span class="cm">// C++20</span>
+    std<span class="op">::</span>string <span class="fn">cmake_minimum</span>() <span class="kw">const</span>;
+};
+<span class="cm">// C++20 之前: 没有自动 == 生成</span>
+<span class="cm">// 总是: 没有自动 __repr__ 等价物</span></pre>
+    </div>
+  </div>
+
+  <div class="tip">
+    <strong>💡 dataclass 的额外能力：</strong>
+    <ul>
+      <li><code>field(default_factory=list)</code> — 可变默认值安全处理（不像 C++ 需要小心）</li>
+      <li><code>frozen=True</code> — 创建不可变实例（类似 C++ const 对象）</li>
+      <li><code>order=True</code> — 自动生成所有比较方法（<code>__lt__</code>, <code>__le__</code>, <code>__gt__</code>, <code>__ge__</code>）</li>
+      <li><code>field(compare=False)</code> — 排除特定字段不参与比较</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== 11: ABC ===== -->
+<section id="s11">
+  <h2>11. ABC 抽象基类 vs 纯虚函数</h2>
+  <p>当你需要<strong>接口契约</strong>（像 C++ 纯虚函数那样强制子类实现），Python 提供 <code>abc</code> 模块。</p>
+
+  <div class="code-dual">
+    <div class="code-block">
+      <div class="label"><span class="badge py">Python ABC</span></div>
+      <pre><span class="kw">from</span> abc <span class="kw">import</span> ABC, abstractmethod
+
+<span class="kw">class</span> <span class="tp">IBuildSystem</span>(<span class="tp">ABC</span>):
+    <span class="st">"""构建系统接口 — 类似 C++ 纯虚基类"""</span>
+
+    <span class="de">@abstractmethod</span>
+    <span class="kw">def</span> <span class="fn">configure</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> bool:
+        <span class="st">"""配置项目，返回成功/失败"""</span>
+        ...
+
+    <span class="de">@abstractmethod</span>
+    <span class="kw">def</span> <span class="fn">build</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> bool:
+        ...
+
+    <span class="kw">def</span> <span class="fn">status</span>(<span class="kw">self</span>):                <span class="cm"># 可以有普通实现</span>
+        <span class="kw">return</span> <span class="st">"BuildSystem v1.0"</span>
+
+<span class="kw">class</span> <span class="tp">CMakeBuild</span>(<span class="tp">IBuildSystem</span>):
+    <span class="kw">def</span> <span class="fn">configure</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="kw">True</span>
+    <span class="kw">def</span> <span class="fn">build</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="kw">True</span>
+
+<span class="cm"># b = IBuildSystem()   # ❌ TypeError: 无法实例化抽象类</span>
+cm <span class="op">=</span> <span class="tp">CMakeBuild</span>()        <span class="cm"># ✅</span></pre>
+    </div>
+    <div class="code-block">
+      <div class="label"><span class="badge cpp">C++ 纯虚类</span></div>
+      <pre><span class="kw">class</span> <span class="tp">IBuildSystem</span> {
+<span class="kw">public</span>:
+    <span class="kw">virtual</span> <span class="kw">bool</span> <span class="fn">configure</span>() <span class="op">=</span> <span class="nu">0</span>;  <span class="cm">// = 0 表示纯虚</span>
+    <span class="kw">virtual</span> <span class="kw">bool</span> <span class="fn">build</span>() <span class="op">=</span> <span class="nu">0</span>;
+    std<span class="op">::</span>string <span class="fn">status</span>() {          <span class="cm">// 非虚普通实现</span>
+        <span class="kw">return</span> <span class="st">"BuildSystem v1.0"</span>;
+    }
+    <span class="kw">virtual</span> <span class="op">~</span>IBuildSystem() <span class="op">=</span> <span class="kw">default</span>;
+};
+
+<span class="kw">class</span> <span class="tp">CMakeBuild</span> : <span class="kw">public</span> IBuildSystem {
+    <span class="kw">bool</span> <span class="fn">configure</span>() <span class="kw">override</span> { <span class="kw">return</span> <span class="kw">true</span>; }
+    <span class="kw">bool</span> <span class="fn">build</span>() <span class="kw">override</span> { <span class="kw">return</span> <span class="kw">true</span>; }
+};</pre>
+    </div>
+  </div>
+
+  <div class="warn">
+    <strong>⚠️ Python ABC 的运行时特性：</strong>抽象方法检查在<strong>实例化时</strong>触发（运行时），不像 C++ 在编译时就报错。这意味着子类如果没有实现抽象方法，直到你尝试创建实例时才会发现。
+  </div>
+</section>
+
+<!-- ===== 12: Mixin ===== -->
+<section id="s12">
+  <h2>12. Mixin 模式 — 多重继承的实战用法</h2>
+  <p>Python 多重继承的最佳实践是 <strong>Mixin 模式</strong>：每个 Mixin 类提供<strong>单一、正交</strong>的功能片段，组合使用。</p>
+
+  <pre class="single"><span class="cm"># Mixin 模式：每个类只做一件事</span>
+<span class="kw">class</span> <span class="tp">LoggingMixin</span>:
+    <span class="st">"""为任何类添加日志能力"""</span>
+    <span class="kw">def</span> <span class="fn">log</span>(<span class="kw">self</span>, msg):
+        <span class="kw">from</span> datetime <span class="kw">import</span> datetime
+        ts <span class="op">=</span> datetime.<span class="fn">now</span>().<span class="fn">strftime</span>(<span class="st">"%H:%M:%S"</span>)
+        <span class="fn">print</span>(<span class="st">f"[{ts}] {type(self).__name__}: {msg}"</span>)
+
+<span class="kw">class</span> <span class="tp">TimerMixin</span>:
+    <span class="st">"""为任何类添加计时能力"""</span>
+    <span class="kw">def</span> <span class="fn">time_it</span>(<span class="kw">self</span>, func, *args):
+        <span class="kw">import</span> time
+        start <span class="op">=</span> time.<span class="fn">perf_counter</span>()
+        result <span class="op">=</span> <span class="fn">func</span>(*args)
+        elapsed <span class="op">=</span> (time.<span class="fn">perf_counter</span>() <span class="op">-</span> start) <span class="op">*</span> <span class="nu">1000</span>
+        <span class="kw">return</span> result, elapsed
+
+<span class="kw">class</span> <span class="tp">SerializerMixin</span>:
+    <span class="st">"""为任何类添加序列化能力"""</span>
+    <span class="kw">def</span> <span class="fn">to_dict</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> {k: v <span class="kw">for</span> k, v <span class="kw">in</span> <span class="kw">self</span>.<span class="fn">__dict__</span>.<span class="fn">items</span>() <span class="kw">if</span> <span class="kw">not</span> k.<span class="fn">startswith</span>(<span class="st">'_'</span>)}
+
+<span class="cm"># 自由组合！</span>
+<span class="kw">class</span> <span class="tp">CppCompiler</span>(<span class="tp">LoggingMixin</span>, <span class="tp">TimerMixin</span>, <span class="tp">SerializerMixin</span>):
+    <span class="st">"""C++ 编译器包装器 — 组合三个 Mixin"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, compiler<span class="op">=</span><span class="st">"g++"</span>, flags<span class="op">=</span><span class="st">"-O2"</span>):
+        <span class="kw">self</span>.compiler <span class="op">=</span> compiler
+        <span class="kw">self</span>.flags <span class="op">=</span> flags
+
+    <span class="kw">def</span> <span class="fn">compile</span>(<span class="kw">self</span>, source):
+        <span class="kw">self</span>.<span class="fn">log</span>(<span class="st">f"编译 {source}"</span>)
+        <span class="kw">def</span> <span class="fn">_fake</span>():
+            <span class="kw">import</span> time; time.<span class="fn">sleep</span>(<span class="nu">0.5</span>)
+            <span class="kw">return</span> <span class="kw">True</span>
+        ok, ms <span class="op">=</span> <span class="kw">self</span>.<span class="fn">time_it</span>(_fake)
+        <span class="kw">self</span>.<span class="fn">log</span>(<span class="st">f"完成 ({ms:.0f}ms)"</span>)
+        <span class="kw">return</span> ok
+
+gcc <span class="op">=</span> <span class="tp">CppCompiler</span>(<span class="st">"g++"</span>, <span class="st">"-O2 -Wall"</span>)
+gcc.<span class="fn">compile</span>(<span class="st">"main.cpp"</span>)
+<span class="fn">print</span>(gcc.<span class="fn">to_dict</span>())  <span class="cm"># {'compiler': 'g++', 'flags': '-O2 -Wall'}</span>
+
+<span class="cm"># C++ 实现相同效果需要用多重继承或组合模式，代码量大得多</span></pre>
+
+  <div class="tip">
+    <strong>💡 Mixin 命名的核心规则：</strong>Mixin 类名通常以 <code>Mixin</code> 结尾，没有 <code>__init__</code>（或者 <code>__init__</code> 中调用 <code>super().__init__()</code>），只提供一小组相关方法。
+  </div>
+</section>
+
+<!-- ===== 总结 ===== -->
+<section>
+  <h2>📋 Day 04 重点回顾</h2>
+  <table class="compare-table">
+    <tr><th>#</th><th>概念</th><th>Python 核心要点</th><th>C++ 对应物</th></tr>
+    <tr><td>1</td><td>类定义</td><td><code>class X:</code>，无头文件，属性动态添加</td><td>class + .h/.cpp，属性编译时确定</td></tr>
+    <tr><td>2</td><td>构造/析构</td><td><code>__init__</code> / GC，不可靠的 <code>__del__</code></td><td>构造函数 / RAII 确定性析构</td></tr>
+    <tr><td>3</td><td>访问控制</td><td><code>_</code> / <code>__</code> 约定，可绕过</td><td>public/private/protected 编译器强制</td></tr>
+    <tr><td>4</td><td>getter/setter</td><td><code>@property</code> 装饰器，自然语法</td><td>手写 getXxx() / setXxx()</td></tr>
+    <tr><td>5</td><td>继承</td><td>单/多继承，MRO (C3 线性化)</td><td>单/多继承，virtual 继承处理菱形</td></tr>
+    <tr><td>6</td><td>多态</td><td>鸭子类型（运行时不检查类型）</td><td>虚函数 + vtable（编译时检查）</td></tr>
+    <tr><td>7</td><td>运算符重载</td><td>魔法方法（<code>__add__</code>, <code>__eq__</code>等）</td><td><code>operator+</code>, <code>operator==</code> 等</td></tr>
+    <tr><td>8</td><td>数据载体</td><td><code>@dataclass</code> 自动生成 boilerplate</td><td>struct，C++20 前无自动 ==</td></tr>
+    <tr><td>9</td><td>接口契约</td><td><code>ABC</code> + <code>@abstractmethod</code>（运行时）</td><td>纯虚函数 <code>= 0</code>（编译时）</td></tr>
+    <tr><td>10</td><td>组合复用</td><td>Mixin 模式（多重继承的实战）</td><td>组合模式 / CRTP</td></tr>
+  </table>
+
+  <div class="tip">
+    <strong>🚀 实践建议：</strong>作为 C++ 开发者，记住 Python OOP 的核心哲学——<strong>"简单优于复杂"</strong>。不需要为了多态去设计复杂的类层次，从简单开始，需要时再加约束。
+  </div>
+</section>
+
+<footer>
+  <p>每日Py · Day 04 · 面向对象编程 <span class="badge py">Python</span> vs <span class="badge cpp">C++</span></p>
+  <p>配套脚本：<a href="day04_basics.py">day04_basics.py</a> | 实用工具：<a href="cpp_class_generator.py">cpp_class_generator.py</a></p>
+</footer>
+
+</div>
+</body>
+</html>

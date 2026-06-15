@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 03 — 文件操作与异常处理 | Python for C++ Devs</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #1c2128;
+            --bg-code: #161b22;
+            --border: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #bc8cff;
+            --accent-cyan: #39d353;
+            --cpp-keyword: #ff7b72;
+            --cpp-string: #a5d6ff;
+            --cpp-comment: #8b949e;
+            --py-keyword: #ff7b72;
+            --py-string: #a5d6ff;
+            --py-builtin: #79c0ff;
+            --py-decorator: #d2a8ff;
+            --py-comment: #8b949e;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Noto Sans SC', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            font-size: 15px;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 3rem 0 2rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2.5rem;
+        }
+        .header .day-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+            color: #fff;
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+        }
+        .header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+        }
+
+        /* TOC */
+        .toc {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2.5rem;
+        }
+        .toc h2 { font-size: 1rem; color: var(--text-secondary); margin-bottom: 0.8rem; }
+        .toc ol { padding-left: 1.5rem; }
+        .toc li { margin: 0.4rem 0; }
+        .toc a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .toc a:hover { color: var(--accent-green); }
+
+        /* Section */
+        .section {
+            margin-bottom: 3rem;
+        }
+        .section h2 {
+            font-size: 1.5rem;
+            color: var(--accent-green);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.2rem;
+        }
+        .section h3 {
+            font-size: 1.15rem;
+            color: var(--accent-purple);
+            margin: 1.5rem 0 0.8rem;
+        }
+        .section p {
+            margin: 0.8rem 0;
+            color: var(--text-primary);
+        }
+        .section ul, .section ol {
+            padding-left: 1.5rem;
+            margin: 0.5rem 0;
+        }
+        .section li {
+            margin: 0.3rem 0;
+        }
+
+        /* Callout boxes */
+        .callout {
+            border-radius: 10px;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+            border-left: 4px solid;
+        }
+        .callout-tip {
+            background: rgba(63, 185, 80, 0.08);
+            border-left-color: var(--accent-green);
+        }
+        .callout-warn {
+            background: rgba(210, 153, 34, 0.08);
+            border-left-color: var(--accent-orange);
+        }
+        .callout-danger {
+            background: rgba(248, 81, 73, 0.08);
+            border-left-color: var(--accent-red);
+        }
+        .callout-info {
+            background: rgba(88, 166, 255, 0.08);
+            border-left-color: var(--accent-blue);
+        }
+        .callout-title {
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+        }
+        .callout-tip .callout-title { color: var(--accent-green); }
+        .callout-warn .callout-title { color: var(--accent-orange); }
+        .callout-danger .callout-title { color: var(--accent-red); }
+        .callout-info .callout-title { color: var(--accent-blue); }
+
+        /* Code comparison */
+        .code-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+            margin: 1rem 0;
+        }
+        @media (max-width: 720px) {
+            .code-compare { grid-template-columns: 1fr; }
+        }
+        .code-block {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        .code-block .lang-tag {
+            display: block;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .code-block .lang-tag.cpp {
+            background: rgba(255, 123, 114, 0.15);
+            color: var(--cpp-keyword);
+        }
+        .code-block .lang-tag.python {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--accent-green);
+        }
+        .code-block pre {
+            padding: 1rem;
+            overflow-x: auto;
+            font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        /* Inline code */
+        code {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.15em 0.4em;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 0.88em;
+            color: var(--accent-orange);
+        }
+
+        /* Syntax highlighting (simplified) */
+        .kw { color: var(--py-keyword); }
+        .str { color: var(--py-string); }
+        .cmt { color: var(--py-comment); font-style: italic; }
+        .bi { color: var(--py-builtin); }
+        .dec { color: var(--py-decorator); }
+        .fn { color: var(--accent-blue); }
+        .num { color: var(--accent-orange); }
+        .op { color: var(--text-primary); }
+
+        /* Table */
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .compare-table th {
+            background: var(--bg-tertiary);
+            padding: 0.7rem 1rem;
+            text-align: left;
+            border: 1px solid var(--border);
+            color: var(--accent-green);
+        }
+        .compare-table td {
+            padding: 0.6rem 1rem;
+            border: 1px solid var(--border);
+        }
+        .compare-table tr:hover td {
+            background: var(--bg-tertiary);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .footer a { color: var(--accent-blue); text-decoration: none; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        /* Flow diagram */
+        .flow-diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            text-align: center;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 2;
+            color: var(--text-secondary);
+        }
+        .flow-diagram .hl { color: var(--accent-green); font-weight: 600; }
+        .flow-diagram .err { color: var(--accent-red); font-weight: 600; }
+        .flow-diagram .path { color: var(--accent-blue); }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<header class="header">
+    <span class="day-badge">DAY 03</span>
+    <h1>文件操作与异常处理</h1>
+    <p class="subtitle">C++ 开发者的 Python 学习之旅 — 从 fstream 到 with 语句，从 try/catch 到 try/except</p>
+</header>
+
+<!-- TOC -->
+<nav class="toc">
+    <h2>📑 本节目录</h2>
+    <ol>
+        <li><a href="#s1">文件操作基础 — open/read/write</a></li>
+        <li><a href="#s2">路径处理 — os.path vs pathlib</a></li>
+        <li><a href="#s3">数据序列化 — json、csv、struct</a></li>
+        <li><a href="#s4">异常处理 — try/except/else/finally</a></li>
+        <li><a href="#s5">自定义异常 — raise 与异常链</a></li>
+        <li><a href="#s6">上下文管理器 — with 与 RAII</a></li>
+        <li><a href="#s7">实战：C++ 项目文件扫描器</a></li>
+    </ol>
+</nav>
+
+<!-- Section 1 -->
+<section class="section" id="s1">
+    <h2>1. 文件操作基础 — open / read / write</h2>
+
+    <p>Python 的文件操作比 C++ 简洁一个量级。核心差异：Python 用 <code>with</code> 语句自动管理资源，不需要手写 <code>close()</code>。</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++ — 读取文件</span>
+            <pre><span class="cmt">// C++: 需要显式 open/close，逐行读取繁琐</span>
+<span class="kw">std::ifstream</span> file(<span class="str">"input.txt"</span>);
+<span class="kw">if</span> (!file.is_open()) {
+    <span class="kw">throw</span> std::runtime_error(<span class="str">"Cannot open file"</span>);
+}
+<span class="kw">std::string</span> line;
+<span class="kw">std::vector</span>&lt;<span class="kw">std::string</span>&gt; lines;
+<span class="kw">while</span> (std::getline(file, line)) {
+    lines.push_back(line);
+}
+file.close();  <span class="cmt">// 必须手动关闭</span>
+<span class="kw">std::cout</span> &lt;&lt; lines.size() &lt;&lt; <span class="str">" lines"</span>;</pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python — 读取文件</span>
+            <pre><span class="kw">with</span> <span class="bi">open</span>(<span class="str">"input.txt"</span>) <span class="kw">as</span> file:
+    lines = file.<span class="fn">readlines</span>()  <span class="cmt"># 读所有行</span>
+
+<span class="bi">print</span>(<span class="str">f"{len(lines)} lines"</span>)
+<span class="cmt"># with 块结束后自动关闭，无需 close()</span></pre>
+        </div>
+    </div>
+
+    <h3>文件模式速查</h3>
+    <table class="compare-table">
+        <tr><th>模式</th><th>含义</th><th>C++ 对应</th></tr>
+        <tr><td><code>"r"</code></td><td>只读（默认）</td><td><code>std::ios::in</code></td></tr>
+        <tr><td><code>"w"</code></td><td>写入（覆盖，不存在则创建）</td><td><code>std::ios::out | std::ios::trunc</code></td></tr>
+        <tr><td><code>"a"</code></td><td>追加写入</td><td><code>std::ios::out | std::ios::app</code></td></tr>
+        <tr><td><code>"x"</code></td><td>排他创建（文件存在则失败）</td><td>需手动检查</td></tr>
+        <tr><td><code>"r+"</code></td><td>读写（不截断）</td><td><code>std::ios::in | std::ios::out</code></td></tr>
+        <tr><td><code>"b"</code></td><td>二进制模式（可与上述组合）</td><td><code>std::ios::binary</code></td></tr>
+    </table>
+
+    <div class="callout callout-tip">
+        <div class="callout-title">💡 Python 的"安全写入"模式</div>
+        Python 的 <code>"x"</code> 模式很实用——只有文件不存在时才创建，防止意外覆盖。C++ 需要先用 <code>std::filesystem::exists</code> 检查，Python 一行搞定。
+    </div>
+
+    <h3>逐行读取与文件迭代</h3>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++ — 逐行处理</span>
+            <pre><span class="cmt">// C++: 读取→操作→另存</span>
+<span class="kw">std::ifstream</span> in(<span class="str">"source.cpp"</span>);
+<span class="kw">std::ofstream</span> out(<span class="str">"output.txt"</span>);
+<span class="kw">std::string</span> line;
+<span class="kw">int</span> count = <span class="num">0</span>;
+<span class="kw">while</span> (std::getline(in, line)) {
+    <span class="kw">if</span> (line.find(<span class="str">"//"</span>) != std::string::npos) {
+        ++count;
+    }
+}
+<span class="kw">std::cout</span> &lt;&lt; count &lt;&lt; <span class="str">" comments"</span>;</pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python — 文件迭代器</span>
+            <pre><span class="kw">with</span> <span class="bi">open</span>(<span class="str">"source.cpp"</span>) <span class="kw">as</span> f:
+    <span class="cmt"># 文件对象本身就是迭代器！</span>
+    comments = <span class="bi">sum</span>(<span class="num">1</span> <span class="kw">for</span> line <span class="kw">in</span> f <span class="kw">if</span> <span class="str">"//"</span> <span class="kw">in</span> line)
+<span class="bi">print</span>(<span class="str">f"{comments} comments"</span>)</pre>
+        </div>
+    </div>
+
+    <div class="callout callout-info">
+        <div class="callout-title">📌 内存对比</div>
+        <code>file.readlines()</code> 把整个文件读入内存（适合小文件），<code>for line in file</code> 是惰性的（适合大文件）。Python 提供了写 C++ 时梦寐以求的简洁性。
+    </div>
+</section>
+
+<!-- Section 2 -->
+<section class="section" id="s2">
+    <h2>2. 路径处理 — os.path vs pathlib</h2>
+
+    <p>Python 提供了<strong>两套</strong>路径处理方案。旧式 <code>os.path</code> 沿用至今，而 Python 3.4+ 的 <code>pathlib</code> 用面向对象的方式处理路径——就像 C++17 的 <code>std::filesystem</code>。</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++17 — filesystem</span>
+            <pre><span class="kw">namespace</span> fs = std::filesystem;
+fs::path p = fs::current_path() / <span class="str">"src"</span> / <span class="str">"main.cpp"</span>;
+<span class="kw">std::cout</span> &lt;&lt; p.string();      <span class="cmt">// 路径字符串</span>
+<span class="kw">std::cout</span> &lt;&lt; p.filename();   <span class="cmt">// main.cpp</span>
+<span class="kw">std::cout</span> &lt;&lt; p.parent_path();<span class="cmt">// src/</span>
+<span class="kw">std::cout</span> &lt;&lt; p.extension();  <span class="cmt">// .cpp</span>
+<span class="kw">std::cout</span> &lt;&lt; p.stem();       <span class="cmt">// main</span></pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python — pathlib</span>
+            <pre><span class="kw">from</span> pathlib <span class="kw">import</span> Path
+
+p = Path.cwd() / <span class="str">"src"</span> / <span class="str">"main.cpp"</span>
+<span class="bi">print</span>(p)              <span class="cmt"># D:\proj\src\main.cpp</span>
+<span class="bi">print</span>(p.name)         <span class="cmt"># main.cpp</span>
+<span class="bi">print</span>(p.parent)       <span class="cmt"># D:\proj\src</span>
+<span class="bi">print</span>(p.suffix)       <span class="cmt"># .cpp</span>
+<span class="bi">print</span>(p.stem)         <span class="cmt"># main</span></pre>
+        </div>
+    </div>
+
+    <h3>pathlib 常用操作</h3>
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">Python — pathlib 实用操作</span>
+        <pre><span class="kw">from</span> pathlib <span class="kw">import</span> Path
+
+src = Path(<span class="str">"src/"</span>)
+
+<span class="cmt"># 遍历所有 .cpp 文件（递归）</span>
+cpp_files = src.<span class="fn">rglob</span>(<span class="str">"*.cpp"</span>)
+
+<span class="cmt"># 过滤 + 操作</span>
+<span class="kw">for</span> f <span class="kw">in</span> src.<span class="fn">glob</span>(<span class="str">"*.h"</span>):
+    <span class="bi">print</span>(f.<span class="fn">stat</span>().st_size)  <span class="cmt"># 文件大小</span>
+    <span class="bi">print</span>(f.<span class="fn">read_text</span>())      <span class="cmt"># 直接读文本（不用 open!）</span>
+
+<span class="cmt"># 创建目录（相当于 mkdir -p）</span>
+Path(<span class="str">"build/obj/x64"</span>).<span class="fn">mkdir</span>(parents=<span class="kw">True</span>, exist_ok=<span class="kw">True</span>)
+
+<span class="cmt"># 拼接路径（/ 运算符重载！）</span>
+config_path = Path.home() / <span class="str">".config"</span> / <span class="str">"myapp.ini"</span></pre>
+    </div>
+
+    <div class="callout callout-tip">
+        <div class="callout-title">💡 选 pathlib，忘掉 os.path</div>
+        <code>pathlib</code> 是 Python 的 <code>std::filesystem</code>——面向对象、直观、没有字符串拼接陷阱。在新项目中，没有理由再用 <code>os.path</code> 了。
+    </div>
+</section>
+
+<!-- Section 3 -->
+<section class="section" id="s3">
+    <h2>3. 数据序列化 — json、csv、struct</h2>
+
+    <p>C++ 序列化通常要引入第三方库（如 nlohmann/json、protobuf），而 Python 标准库直接提供 <code>json</code>、<code>csv</code>、<code>pickle</code>、<code>struct</code>。对于构建脚本和配置管理，<code>json</code> 是首选。</p>
+
+    <h3>JSON — C++ 生态的痛点，Python 的舒适区</h3>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++ — nlohmann/json</span>
+            <pre><span class="cmt">// 需要引入第三方库</span>
+<span class="kw">#include</span> &lt;nlohmann/json.hpp&gt;
+<span class="kw">using</span> json = nlohmann::json;
+
+<span class="cmt">// 构建 JSON</span>
+json config = {
+    {<span class="str">"name"</span>, <span class="str">"MyApp"</span>},
+    {<span class="str">"version"</span>, <span class="str">"1.0"</span>},
+    {<span class="str">"cxx_standard"</span>, <span class="num">17</span>}
+};
+
+<span class="cmt">// 序列化 + 写文件</span>
+<span class="kw">std::ofstream</span> o(<span class="str">"config.json"</span>);
+o &lt;&lt; <span class="fn">config.dump</span>(<span class="num">2</span>);</pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python — 内置 json</span>
+            <pre><span class="kw">import</span> json
+
+<span class="cmt"># 构建 JSON</span>
+config = {
+    <span class="str">"name"</span>: <span class="str">"MyApp"</span>,
+    <span class="str">"version"</span>: <span class="str">"1.0"</span>,
+    <span class="str">"cxx_standard"</span>: <span class="num">17</span>,
+}
+
+<span class="cmt"># 序列化 + 写文件，一行搞定</span>
+<span class="kw">with</span> <span class="bi">open</span>(<span class="str">"config.json"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f:
+    json.<span class="fn">dump</span>(config, f, indent=<span class="num">2</span>)</pre>
+        </div>
+    </div>
+
+    <h3>JSON 转换对照表</h3>
+    <table class="compare-table">
+        <tr><th>Python</th><th>JSON</th><th>C++ nlohmann/json</th></tr>
+        <tr><td><code>dict</code></td><td><code>{"key": "val"}</code></td><td><code>json::object()</code></td></tr>
+        <tr><td><code>list</code></td><td><code>[1, 2, 3]</code></td><td><code>json::array()</code></td></tr>
+        <tr><td><code>str</code></td><td><code>"hello"</code></td><td><code>json("hello")</code></td></tr>
+        <tr><td><code>int / float</code></td><td><code>42 / 3.14</code></td><td><code>json(42)</code></td></tr>
+        <tr><td><code>bool</code></td><td><code>true / false</code></td><td><code>json(true)</code></td></tr>
+        <tr><td><code>None</code></td><td><code>null</code></td><td><code>json(nullptr)</code></td></tr>
+    </table>
+
+    <h3>CSV 操作</h3>
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">Python — csv 模块</span>
+        <pre><span class="kw">import</span> csv
+
+<span class="cmt"># 写入 CSV</span>
+<span class="kw">with</span> <span class="bi">open</span>(<span class="str">"targets.csv"</span>, <span class="str">"w"</span>, newline=<span class="str">""</span>) <span class="kw">as</span> f:
+    writer = csv.<span class="fn">writer</span>(f)
+    writer.<span class="fn">writerow</span>([<span class="str">"Target"</span>, <span class="str">"Type"</span>, <span class="str">"Sources"</span>])
+    writer.<span class="fn">writerows</span>([
+        [<span class="str">"MyApp"</span>, <span class="str">"EXECUTABLE"</span>, <span class="num">15</span>],
+        [<span class="str">"Utils"</span>, <span class="str">"STATIC_LIB"</span>, <span class="num">8</span>],
+    ])
+
+<span class="cmt"># 读取 CSV（DictReader 是最舒服的方式）</span>
+<span class="kw">with</span> <span class="bi">open</span>(<span class="str">"targets.csv"</span>) <span class="kw">as</span> f:
+    <span class="kw">for</span> row <span class="kw">in</span> csv.<span class="fn">DictReader</span>(f):
+        <span class="bi">print</span>(<span class="str">f"{row['Target']}: {row['Sources']} sources"</span>)</pre>
+    </div>
+
+    <h3>struct — 二进制打包</h3>
+    <p>Python 的 <code>struct</code> 模块让你像 C/C++ <code>struct</code> 一样打包/解包二进制数据——对于解析自定义二进制格式非常有用：</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++ — 写入二进制</span>
+            <pre><span class="kw">struct</span> Header {
+    <span class="kw">uint32_t</span> magic = <span class="num">0xDEADBEEF</span>;
+    <span class="kw">uint16_t</span> version = <span class="num">1</span>;
+    <span class="kw">float</span> scale = <span class="num">1.5f</span>;
+};
+<span class="cmt">// memcpy → fwrite → close</span></pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python — struct 打包</span>
+            <pre><span class="kw">import</span> struct
+
+<span class="cmt"># I=uint32, H=uint16, f=float32</span>
+data = struct.<span class="fn">pack</span>(<span class="str">"IHf"</span>, <span class="num">0xDEADBEEF</span>, <span class="num">1</span>, <span class="num">1.5</span>)
+<span class="cmt"># data = b'\xef\xbe\xad\xde\x01\x00\x00\x00\xc0?'</span>
+
+<span class="kw">with</span> <span class="bi">open</span>(<span class="str">"header.bin"</span>, <span class="str">"wb"</span>) <span class="kw">as</span> f:
+    f.<span class="fn">write</span>(data)</pre>
+        </div>
+    </div>
+
+    <div class="callout callout-info">
+        <div class="callout-title">📌 struct 常见格式符</div>
+        <table class="compare-table" style="font-size:0.85rem;">
+            <tr><th>格式</th><th>C++ 类型</th><th>Python 类型</th><th>大小</th></tr>
+            <tr><td><code>i</code></td><td><code>int</code></td><td><code>int</code></td><td>4 bytes</td></tr>
+            <tr><td><code>I</code></td><td><code>unsigned int</code></td><td><code>int</code></td><td>4 bytes</td></tr>
+            <tr><td><code>q</code></td><td><code>long long</code></td><td><code>int</code></td><td>8 bytes</td></tr>
+            <tr><td><code>f</code></td><td><code>float</code></td><td><code>float</code></td><td>4 bytes</td></tr>
+            <tr><td><code>d</code></td><td><code>double</code></td><td><code>float</code></td><td>8 bytes</td></tr>
+            <tr><td><code>?</code></td><td><code>bool</code></td><td><code>bool</code></td><td>1 byte</td></tr>
+        </table>
+    </div>
+</section>
+
+<!-- Section 4 -->
+<section class="section" id="s4">
+    <h2>4. 异常处理 — try/except/else/finally</h2>
+
+    <p>Python 的异常机制与 C++ 有相似之处，但多了 <code>else</code> 和 <code>finally</code> 的灵活组合，而且 Python 鼓励 EAFP（Easier to Ask Forgiveness than Permission）风格。</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++ — try/catch</span>
+            <pre><span class="kw">try</span> {
+    <span class="kw">auto</span> data = load_file(filepath);
+    process(data);
+} <span class="kw">catch</span> (<span class="kw">const</span> std::ios_base::failure& e) {
+    std::cerr &lt;&lt; <span class="str">"IO Error: "</span> &lt;&lt; e.what();
+} <span class="kw">catch</span> (<span class="kw">const</span> std::exception& e) {
+    std::cerr &lt;&lt; <span class="str">"Error: "</span> &lt;&lt; e.what();
+}
+<span class="cmt">// 没有 else/finally 语法糖</span></pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python — try/except/else/finally</span>
+            <pre><span class="kw">try</span>:
+    data = load_file(filepath)
+    process(data)
+<span class="kw">except</span> <span class="bi">FileNotFoundError</span>:
+    <span class="bi">print</span>(<span class="str">"文件不存在"</span>)
+<span class="kw">except</span> <span class="bi">PermissionError</span>:
+    <span class="bi">print</span>(<span class="str">"没有权限"</span>)
+<span class="kw">else</span>:
+    <span class="cmt"># 这里只有 try 成功时执行！</span>
+    <span class="bi">print</span>(<span class="str">"处理成功"</span>)
+<span class="kw">finally</span>:
+    <span class="cmt"># 无论如何都执行（清理资源）</span>
+    cleanup()</pre>
+        </div>
+    </div>
+
+    <div class="flow-diagram">
+        <span class="hl">try 块</span> → 成功 → <span class="hl">else 块</span> → <span class="hl">finally 块</span><br>
+        <span class="hl">try 块</span> → 异常 → <span class="err">except 块</span> → <span class="hl">finally 块</span><br>
+        <span class="hl">try 块</span> → 异常 → <span class="err">未匹配</span> → <span class="err">向上传播</span>
+    </div>
+
+    <h3>常见内置异常</h3>
+    <table class="compare-table">
+        <tr><th>Python 异常</th><th>触发场景</th><th>C++ 对应</th></tr>
+        <tr><td><code>FileNotFoundError</code></td><td>文件不存在</td><td><code>std::ios_base::failure</code></td></tr>
+        <tr><td><code>PermissionError</code></td><td>权限不足</td><td>需检查 errno</td></tr>
+        <tr><td><code>ValueError</code></td><td>类型对但值不对</td><td><code>std::invalid_argument</code></td></tr>
+        <tr><td><code>TypeError</code></td><td>类型错误</td><td>编译期错误（C++ 不会触发）</td></tr>
+        <tr><td><code>KeyError</code></td><td>字典键不存在</td><td>无（未定义行为/返回 end iterator）</td></tr>
+        <tr><td><code>IndexError</code></td><td>列表索引越界</td><td><code>std::out_of_range</code></td></tr>
+        <tr><td><code>ZeroDivisionError</code></td><td>除以零</td><td>未定义行为（整数）/ inf（浮点）</td></tr>
+        <tr><td><code>OSError</code></td><td>系统调用失败</td><td>需检查 errno / <code>system_error</code></td></tr>
+    </table>
+
+    <div class="callout callout-warn">
+        <div class="callout-title">⚠️ EAFP vs LBYL</div>
+        <strong>LBYL</strong> (Look Before You Leap)：先检查再行动。C++ 风格。<br>
+        <strong>EAFP</strong> (Easier to Ask Forgiveness than Permission)：先尝试，捕获异常。Python 风格。<br>
+        <br>
+        在 Python 中，<code>try/except</code> 比预检查（<code>if key in dict</code>）更 Pythonic，也是性能更优的路径（正常情况零开销）。
+    </div>
+</section>
+
+<!-- Section 5 -->
+<section class="section" id="s5">
+    <h2>5. 自定义异常 — raise 与异常链</h2>
+
+    <p>Python 中定义异常超简单，而且支持 <code>from</code> 关键字建立异常链——比 C++ 的 <code>nested_exception</code> 直观得多。</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++ — 自定义异常</span>
+            <pre><span class="kw">class</span> ParseError : <span class="kw">public</span> std::exception {
+    <span class="kw">std::string</span> msg;
+<span class="kw">public</span>:
+    ParseError(<span class="kw">const</span> <span class="kw">std::string</span>& file, <span class="kw">int</span> line)
+        : msg(<span class="str">"Parse error in "</span> + file
+              + <span class="str">":"</span> + std::to_string(line)) {}
+    <span class="kw">const char</span>* what() <span class="kw">const noexcept</span> <span class="kw">override</span> {
+        <span class="kw">return</span> msg.c_str();
+    }
+};
+<span class="kw">throw</span> ParseError(<span class="str">"config.xml"</span>, <span class="num">42</span>);</pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python — 自定义异常</span>
+            <pre><span class="cmt"># 一行定义异常类！</span>
+<span class="kw">class</span> <span class="fn">ParseError</span>(<span class="bi">Exception</span>):
+    <span class="kw">pass</span>
+
+<span class="cmt"># 抛异常</span>
+<span class="kw">raise</span> <span class="fn">ParseError</span>(<span class="str">f"Parse error in config.xml:42"</span>)
+
+<span class="cmt"># 带 from 的异常链（Python 独有！）</span>
+<span class="kw">try</span>:
+    raw = <span class="bi">open</span>(<span class="str">"config.xml"</span>)
+<span class="kw">except</span> <span class="bi">OSError</span> <span class="kw">as</span> e:
+    <span class="kw">raise</span> <span class="fn">ParseError</span>(<span class="str">"配置加载失败"</span>) <span class="kw">from</span> e</pre>
+        </div>
+    </div>
+
+    <div class="callout callout-tip">
+        <div class="callout-title">💡 raise from 的妙用</div>
+        <code>raise X from Y</code> 建立了一条清晰的因果链。traceback 会显示 "The above exception was the direct cause of the following exception"。C++ 的 <code>throw_with_nested</code> 概念类似但使用繁琐。
+    </div>
+
+    <h3>异常层次结构</h3>
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">Python — 组织异常层次</span>
+        <pre><span class="kw">class</span> <span class="fn">BuildError</span>(<span class="bi">Exception</span>):
+    <span class="str">"""所有构建相关异常的基类"""</span>
+    <span class="kw">pass</span>
+
+<span class="kw">class</span> <span class="fn">CompileError</span>(BuildError):
+    <span class="str">"""编译阶段错误"""</span>
+    <span class="kw">pass</span>
+
+<span class="kw">class</span> <span class="fn">LinkError</span>(BuildError):
+    <span class="str">"""链接阶段错误"""</span>
+    <span class="kw">pass</span>
+
+<span class="cmt"># 统一的异常处理</span>
+<span class="kw">try</span>:
+    build()
+<span class="kw">except</span> BuildError <span class="kw">as</span> e:  <span class="cmt"># 捕获所有构建错误</span>
+    <span class="bi">print</span>(<span class="str">f"构建失败: {e}"</span>)
+<span class="kw">except</span> <span class="bi">Exception</span> <span class="kw">as</span> e:
+    <span class="bi">print</span>(<span class="str">f"意外错误: {e}"</span>)</pre>
+    </div>
+</section>
+
+<!-- Section 6 -->
+<section class="section" id="s6">
+    <h2>6. 上下文管理器 — with 语句的秘密</h2>
+
+    <p>如果你来自 C++，你爱 RAII（Resource Acquisition Is Initialization）。Python 的上下文管理器提供了类似的安全感，但机制是显式的。</p>
+
+    <p>核心关联：<strong>C++ RAII ≈ Python 上下文管理器（with 语句）</strong></p>
+
+    <h3>with 是如何工作的</h3>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++ — RAII</span>
+            <pre><span class="cmt">// 构造函数获取资源</span>
+<span class="cmt">// 析构函数自动释放</span>
+{
+    <span class="kw">std::lock_guard</span>&lt;<span class="kw">std::mutex</span>&gt; lock(mtx);
+    <span class="cmt">// 临界区代码</span>
+    unsafe_operation();
+}   <span class="cmt">// lock 在此自动释放</span>
+
+<span class="cmt">// 即使异常也保证析构</span></pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python — with 语句</span>
+            <pre><span class="kw">with</span> <span class="bi">open</span>(<span class="str">"data.txt"</span>) <span class="kw">as</span> f:
+    data = f.<span class="fn">read</span>()
+    process(data)
+<span class="cmt"># f 在此自动关闭</span>
+
+<span class="cmt"># 等价于：</span>
+f = <span class="bi">open</span>(<span class="str">"data.txt"</span>)
+<span class="kw">try</span>:
+    data = f.<span class="fn">read</span>()
+    process(data)
+<span class="kw">finally</span>:
+    f.<span class="fn">close</span>()  <span class="cmt"># 即使异常也保证执行</span></pre>
+        </div>
+    </div>
+
+    <h3>实现自己的上下文管理器</h3>
+    <p>两种方式：基于类（<code>__enter__</code>/<code>__exit__</code>）和基于生成器（<code>contextlib</code>）。后者通常更简洁：</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag python">基于类 — __enter__/__exit__</span>
+            <pre><span class="kw">class</span> <span class="fn">WorkingDir</span>:
+    <span class="str">"""临时切换工作目录（自动恢复）"""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, path):
+        self.path = path
+        self.old = <span class="kw">None</span>
+
+    <span class="kw">def</span> <span class="fn">__enter__</span>(self):
+        self.old = Path.<span class="fn">cwd</span>()
+        <span class="bi">os</span>.<span class="fn">chdir</span>(self.path)
+        <span class="kw">return</span> self
+
+    <span class="kw">def</span> <span class="fn">__exit__</span>(self, *args):
+        <span class="bi">os</span>.<span class="fn">chdir</span>(self.old)
+
+<span class="kw">with</span> <span class="fn">WorkingDir</span>(<span class="str">"build/"</span>):
+    subprocess.<span class="fn">run</span>([<span class="str">"cmake"</span>, <span class="str">".."</span>])
+<span class="cmt"># 自动回到原目录，安全！</span></pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">基于生成器 — contextmanager</span>
+            <pre><span class="kw">from</span> contextlib <span class="kw">import</span> contextmanager
+
+<span class="dec">@contextmanager</span>
+<span class="kw">def</span> <span class="fn">working_dir</span>(path):
+    old = Path.<span class="fn">cwd</span>()
+    <span class="bi">os</span>.<span class="fn">chdir</span>(path)
+    <span class="kw">try</span>:
+        <span class="kw">yield</span>  <span class="cmt"># 这是切入点</span>
+    <span class="kw">finally</span>:
+        <span class="bi">os</span>.<span class="fn">chdir</span>(old)  <span class="cmt"># 保证恢复</span>
+
+<span class="kw">with</span> <span class="fn">working_dir</span>(<span class="str">"build/"</span>):
+    subprocess.<span class="fn">run</span>([<span class="str">"cmake"</span>, <span class="str">".."</span>])</pre>
+        </div>
+    </div>
+
+    <h3>实用上下文管理器场景</h3>
+    <table class="compare-table">
+        <tr><th>场景</th><th>C++ RAII</th><th>Python 上下文管理器</th></tr>
+        <tr><td>文件操作</td><td><code>ifstream</code> 析构关闭</td><td><code>with open(...) as f</code></td></tr>
+        <tr><td>互斥锁</td><td><code>std::lock_guard</code></td><td><code>with threading.Lock()</code></td></tr>
+        <tr><td>临时目录切换</td><td>手动记录+恢复</td><td>自定义 <code>WorkingDir</code></td></tr>
+        <tr><td>计时器</td><td>手动 RAII 类</td><td><code>@contextmanager</code> 计时</td></tr>
+        <tr><td>数据库事务</td><td>ORM 管理</td><td><code>with conn.begin()</code></td></tr>
+        <tr><td>抑制异常</td><td>try/catch(empty)</td><td><code>contextlib.suppress(FileNotFoundError)</code></td></tr>
+    </table>
+</section>
+
+<!-- Section 7 -->
+<section class="section" id="s7">
+    <h2>7. 实战：C++ 项目文件扫描器</h2>
+
+    <p>综合运用今天学到的所有知识，构建一个实用的 C++ 项目文件扫描工具。它能：</p>
+    <ul style="padding-left:1.5rem;margin:0.5rem 0;">
+        <li>递归扫描目录，找出所有 .cpp/.h/.hpp 文件</li>
+        <li>统计每个文件的代码行数（区分代码/空行/注释）</li>
+        <li>分析 #include 依赖关系</li>
+        <li>生成 JSON 格式的分析报告</li>
+        <li>优雅的错误处理（跳过无权限目录等）</li>
+    </ul>
+
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">cpp_project_scanner.py — 核心逻辑</span>
+        <pre><span class="kw">class</span> <span class="fn">CppProjectScanner</span>:
+    <span class="str">"""C++ 项目文件扫描分析器"""</span>
+
+    <span class="kw">def</span> <span class="fn">scan</span>(self, root: Path) -> <span class="bi">list</span>[FileInfo]:
+        <span class="str">"""递归扫描所有 C++ 源文件"""</span>
+        files = []
+        <span class="kw">for</span> pattern <span class="kw">in</span> [<span class="str">"*.cpp"</span>, <span class="str">"*.cc"</span>, <span class="str">"*.cxx"</span>,
+                        <span class="str">"*.h"</span>, <span class="str">"*.hpp"</span>, <span class="str">"*.hxx"</span>]:
+            <span class="kw">try</span>:
+                <span class="kw">for</span> filepath <span class="kw">in</span> root.<span class="fn">rglob</span>(pattern):
+                    <span class="kw">try</span>:
+                        info = self.<span class="fn">_analyze_file</span>(filepath)
+                        files.<span class="fn">append</span>(info)
+                    <span class="kw">except</span> <span class="bi">PermissionError</span>:
+                        <span class="kw">continue</span>  <span class="cmt"># 跳过无权限文件</span>
+            <span class="kw">except</span> <span class="bi">OSError</span>:
+                <span class="kw">continue</span>  <span class="cmt"># 跳过无法访问的目录</span>
+        <span class="kw">return</span> files
+
+    <span class="kw">def</span> <span class="fn">_analyze_file</span>(self, filepath: Path) -> FileInfo:
+        <span class="str">"""分析单个文件：行数、注释、include"""</span>
+        <span class="kw">with</span> <span class="bi">open</span>(filepath, errors=<span class="str">"replace"</span>) <span class="kw">as</span> f:
+            lines = f.<span class="fn">readlines</span>()
+
+        code_lines = blank_lines = comment_lines = <span class="num">0</span>
+        includes = []
+        in_block_comment = <span class="kw">False</span>
+
+        <span class="kw">for</span> line <span class="kw">in</span> lines:
+            stripped = line.<span class="fn">strip</span>()
+            <span class="kw">if</span> <span class="kw">not</span> stripped:
+                blank_lines += <span class="num">1</span>
+            <span class="kw">elif</span> stripped.<span class="fn">startswith</span>(<span class="str">"//"</span>):
+                comment_lines += <span class="num">1</span>
+            <span class="kw">else</span>:
+                code_lines += <span class="num">1</span>
+            <span class="cmt"># 提取 #include</span>
+            <span class="kw">if</span> stripped.<span class="fn">startswith</span>(<span class="str">"#include"</span>):
+                includes.<span class="fn">append</span>(stripped)
+
+        <span class="kw">return</span> <span class="fn">FileInfo</span>(path=filepath, code=code_lines,
+                          blank=blank_lines, comment=comment_lines,
+                          includes=includes)</pre>
+    </div>
+
+    <div class="callout callout-info">
+        <div class="callout-title">🚀 运行方式</div>
+        <pre style="margin:0.3rem 0;color:var(--text-primary);font-family:monospace;font-size:0.85rem;"># 分析当前目录
+python cpp_project_scanner.py .
+
+# 分析指定项目 + 输出 JSON 报告
+python cpp_project_scanner.py D:\MyCppProject -o report.json
+
+# 使用示例演示
+python cpp_project_scanner.py --demo</pre>
+    </div>
+</section>
+
+<!-- Summary -->
+<section class="section">
+    <h2>📋 Day 03 总结</h2>
+    <table class="compare-table">
+        <tr><th>知识点</th><th>C++ 对应</th><th>Python 优势</th></tr>
+        <tr><td>文件操作</td><td><code>fstream</code></td><td><code>with open(...)</code> 自动关闭</td></tr>
+        <tr><td>路径处理</td><td><code>std::filesystem</code></td><td><code>pathlib</code>，运算符重载拼接</td></tr>
+        <tr><td>JSON 序列化</td><td>第三方库</td><td><code>json</code> 内置，一行读写</td></tr>
+        <tr><td>CSV 处理</td><td>无标准方案</td><td><code>csv</code> 内置，DictReader 神器</td></tr>
+        <tr><td>二进制打包</td><td><code>struct</code> (C语言) / memcpy</td><td><code>struct</code> 模块，格式串驱动</td></tr>
+        <tr><td>异常处理</td><td><code>try/catch</code></td><td><code>try/except/else/finally</code></td></tr>
+        <tr><td>异常链</td><td><code>throw_with_nested</code></td><td><code>raise X from Y</code></td></tr>
+        <tr><td>资源管理</td><td>RAII（隐式）</td><td>上下文管理器（显式 with）</td></tr>
+    </table>
+
+    <div class="callout callout-warn">
+        <div class="callout-title">⚠️ 今天最重要的三个注意事项</div>
+        <ol style="padding-left:1.2rem;margin:0.3rem 0;">
+            <li><strong>总是用 <code>with</code> 打开文件</strong> — Python 没有析构函数的确定性保证（GC 回收时间不确定），不用 <code>with</code> 可能造成文件句柄泄漏</li>
+            <li><strong>异常不要"裸捕获"</strong> — <code>except:</code> 会捕获 <code>KeyboardInterrupt</code> 等系统异常。至少用 <code>except Exception:</code></li>
+            <li><strong>pathlib 优于字符串拼接</strong> — <code>os.path.join</code> 和手动 <code>"/"</code> 拼接都容易出错，<code>Path / "subdir" / "file"</code> 安全又直观</li>
+        </ol>
+    </div>
+
+    <div class="callout callout-tip">
+        <div class="callout-title">🔗 EAFP vs LBYL — Python 的异常哲学</div>
+        在 C++ 中，大量使用异常是昂贵的，所以 LBYL（先检查再行动）是主流。Python 正好相反：<code>try/except</code> 的正常路径开销极低，EAFP（先行动再处理异常）是 Pythonic 的正确姿势。
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <p>Python for C++ Devs — Day 03 | 生成于 2026-06-11</p>
+    <p>配套脚本: <code>day03_basics.py</code> | <code>cpp_project_scanner.py</code></p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python 辅助 C++ 开发 · Day 01 — Python 入门与 C++ 对比视角</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #161822;
+            --card: #1c1f2e;
+            --border: #2a2d3e;
+            --fg: #e4e6f0;
+            --muted: #8b8fa3;
+            --accent: #4fc3f7;
+            --accent2: #7c4dff;
+            --green: #66bb6a;
+            --red: #ef5350;
+            --orange: #ffa726;
+            --yellow: #ffee58;
+            --code-bg: #12131a;
+            --cpp: #659ad2;
+            --py: #ffd43b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.8;
+            padding: 0;
+        }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, #1a1c2e 0%, #0f1117 50%, #12131f 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -80px; left: -80px;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(79,195,247,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -60px; right: -60px;
+            width: 250px; height: 250px;
+            background: radial-gradient(circle, rgba(124,77,255,0.06) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .hero h1 {
+            font-size: 2.4em;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .hero .subtitle {
+            color: var(--muted);
+            font-size: 1.1em;
+        }
+        .hero .day-badge {
+            display: inline-block;
+            background: var(--accent);
+            color: #000;
+            font-weight: 700;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-bottom: 16px;
+        }
+
+        /* Navigation */
+        .toc {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            max-width: 900px;
+            margin: 32px auto;
+            padding: 28px 36px;
+        }
+        .toc h2 {
+            color: var(--accent);
+            font-size: 1.2em;
+            margin-bottom: 14px;
+        }
+        .toc ol {
+            padding-left: 24px;
+        }
+        .toc li {
+            margin: 6px 0;
+        }
+        .toc a {
+            color: var(--fg);
+            text-decoration: none;
+            border-bottom: 1px dashed var(--muted);
+            transition: color 0.2s;
+        }
+        .toc a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+        /* Main content */
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 20px 32px 80px;
+        }
+
+        section {
+            margin: 48px 0;
+        }
+
+        h2 {
+            color: var(--accent);
+            font-size: 1.6em;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+        }
+        h3 {
+            color: var(--fg);
+            font-size: 1.25em;
+            margin: 24px 0 12px;
+        }
+        h4 {
+            color: var(--muted);
+            font-size: 1.05em;
+            margin: 18px 0 8px;
+        }
+
+        p { margin: 10px 0; }
+        strong { color: var(--accent); }
+        .note {
+            background: rgba(79,195,247,0.08);
+            border-left: 3px solid var(--accent);
+            padding: 14px 18px;
+            border-radius: 0 8px 8px 0;
+            margin: 16px 0;
+            color: var(--fg);
+        }
+        .warn {
+            background: rgba(255,167,38,0.08);
+            border-left: 3px solid var(--orange);
+            padding: 14px 18px;
+            border-radius: 0 8px 8px 0;
+            margin: 16px 0;
+        }
+        .warn strong { color: var(--orange); }
+
+        /* Code blocks */
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 22px;
+            overflow-x: auto;
+            margin: 14px 0;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        code {
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+        }
+        .inline-code {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: var(--accent);
+        }
+
+        /* Comparison table */
+        .compare-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+        .compare-table th {
+            background: var(--surface);
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .compare-table th:first-child { color: var(--muted); }
+        .compare-table th:nth-child(2) { color: var(--cpp); }
+        .compare-table th:nth-child(3) { color: var(--py); }
+        .compare-table td {
+            padding: 10px 16px;
+            border-top: 1px solid var(--border);
+            vertical-align: top;
+        }
+        .compare-table tr:hover td {
+            background: rgba(79,195,247,0.03);
+        }
+
+        /* Comparison side-by-side */
+        .code-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 14px 0;
+        }
+        .code-compare .panel {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .code-compare .panel-header {
+            padding: 8px 14px;
+            font-size: 0.82em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .code-compare .cpp-panel .panel-header {
+            background: rgba(101,154,210,0.15);
+            color: var(--cpp);
+        }
+        .code-compare .py-panel .panel-header {
+            background: rgba(255,212,59,0.12);
+            color: var(--py);
+        }
+        .code-compare pre {
+            border: none;
+            border-radius: 0;
+            margin: 0;
+        }
+
+        /* Key point card */
+        .keypoint {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin: 20px 0;
+        }
+        .keypoint .icon {
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        /* Summary */
+        .summary-box {
+            background: linear-gradient(135deg, rgba(79,195,247,0.06), rgba(124,77,255,0.06));
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            margin: 32px 0;
+        }
+        .summary-box h3 {
+            color: var(--accent);
+            margin-bottom: 14px;
+        }
+        .summary-box ul {
+            padding-left: 20px;
+        }
+        .summary-box li {
+            margin: 6px 0;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: var(--muted);
+            padding: 32px;
+            border-top: 1px solid var(--border);
+            font-size: 0.85em;
+        }
+
+        @media (max-width: 768px) {
+            .hero { padding: 36px 20px; }
+            .hero h1 { font-size: 1.6em; }
+            .container { padding: 16px; }
+            .code-compare { grid-template-columns: 1fr; }
+            .compare-table { font-size: 0.85em; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+    <div class="day-badge">DAY 01</div>
+    <h1>Python 入门 — C++ 开发者的视角</h1>
+    <p class="subtitle">用你已经知道的 C++ 知识，快速掌握 Python 的核心差异</p>
+</div>
+
+<!-- Table of Contents -->
+<div class="toc">
+    <h2>📑 今日目录</h2>
+    <ol>
+        <li><a href="#why-python">为什么 C++ 开发者需要 Python？</a></li>
+        <li><a href="#env-setup">环境搭建</a></li>
+        <li><a href="#syntax-diff">语法差异速览</a></li>
+        <li><a href="#var-type">变量与数据类型</a></li>
+        <li><a href="#first-program">第一个实用脚本：C++ 头文件生成器</a></li>
+        <li><a href="#summary">今日总结</a></li>
+    </ol>
+</div>
+
+<div class="container">
+
+<!-- Section 1 -->
+<section id="why-python">
+    <h2>1. 为什么 C++ 开发者需要 Python？</h2>
+    <p>如果你每天都在写 C++，可能会觉得 Python「太慢」「不够底层」。但在实际开发中，Python 是 C++ 开发者的最佳搭档：</p>
+
+    <div class="compare-table">
+        <table>
+            <thead>
+                <tr><th>场景</th><th>C++</th><th>Python</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>构建脚本</td>
+                    <td>CMake / Makefile</td>
+                    <td>更灵活的脚本控制</td>
+                </tr>
+                <tr>
+                    <td>代码生成</td>
+                    <td>手写或模板元编程</td>
+                    <td>脚本批量生成 .h/.cpp</td>
+                </tr>
+                <tr>
+                    <td>自动化测试</td>
+                    <td>Google Test + 手动配置</td>
+                    <td>pytest 快速编写测试</td>
+                </tr>
+                <tr>
+                    <td>数据分析</td>
+                    <td>需自己实现</td>
+                    <td>NumPy / Pandas 开箱即用</td>
+                </tr>
+                <tr>
+                    <td>调试辅助</td>
+                    <td>GDB 命令行</td>
+                    <td>写脚本解析日志、分析 Core Dump</td>
+                </tr>
+                <tr>
+                    <td>原型验证</td>
+                    <td>编译 → 链接 → 运行</td>
+                    <td>即写即运行，快速验证思路</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="note">
+        <strong>核心理念：</strong>Python 不替代 C++，而是补位。用 Python 处理「胶水工作」，让 C++ 专注在性能关键路径上。
+    </div>
+</section>
+
+<!-- Section 2 -->
+<section id="env-setup">
+    <h2>2. 环境搭建</h2>
+
+    <h3>2.1 安装 Python</h3>
+    <p>推荐使用 <strong>Python 3.10+</strong>（当前最新稳定版 3.13）。下载地址：<a href="https://www.python.org/downloads/" style="color:var(--accent)">python.org</a></p>
+
+    <div class="warn">
+        <strong>⚠️ 务必勾选</strong> <span class="inline-code">Add Python to PATH</span>，否则命令行无法直接使用 <span class="inline-code">python</span> 命令。
+    </div>
+
+    <h3>2.2 验证安装</h3>
+    <pre><code># 终端执行
+python --version
+# 输出类似: Python 3.13.x
+
+pip --version
+# 输出类似: pip 25.x from ...</code></pre>
+
+    <h3>2.3 推荐工具链</h3>
+    <div class="compare-table">
+        <table>
+            <thead>
+                <tr><th>用途</th><th>C++ 工具</th><th>Python 对应</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>编辑器/IDE</td>
+                    <td>Visual Studio / CLion</td>
+                    <td>VS Code + Python 插件 / PyCharm</td>
+                </tr>
+                <tr>
+                    <td>包管理</td>
+                    <td>vcpkg / Conan</td>
+                    <td>pip + venv</td>
+                </tr>
+                <tr>
+                    <td>格式化</td>
+                    <td>clang-format</td>
+                    <td>black / ruff</td>
+                </tr>
+                <tr>
+                    <td>类型检查</td>
+                    <td>编译器自带</td>
+                    <td>mypy</td>
+                </tr>
+                <tr>
+                    <td>调试</td>
+                    <td>GDB / LLDB</td>
+                    <td>内置 pdb / VS Code 调试器</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>2.4 虚拟环境（重要！）</h3>
+    <p>Python 项目必须使用虚拟环境，避免全局包污染——类似 C++ 项目不会把所有库装到系统目录。</p>
+    <pre><code># 创建虚拟环境
+python -m venv .venv
+
+# 激活（Windows）
+.venv\Scripts\activate
+
+# 激活（macOS/Linux）
+source .venv/bin/activate
+
+# 安装包（激活后）
+pip install requests</code></pre>
+</section>
+
+<!-- Section 3 -->
+<section id="syntax-diff">
+    <h2>3. 语法差异速览</h2>
+    <p>作为 C++ 开发者，最大的思维转变不是学新语法，而是<strong>忘掉一些 C++ 的习惯</strong>。</p>
+
+    <h3>3.1 无分号、无大括号</h3>
+    <div class="code-compare">
+        <div class="panel cpp-panel">
+            <div class="panel-header">C++</div>
+            <pre><code>if (x > 0) {
+    std::cout &lt;&lt; "positive"
+              &lt;&lt; std::endl;
+}</code></pre>
+        </div>
+        <div class="panel py-panel">
+            <div class="panel-header">Python</div>
+            <pre><code>if x > 0:
+    print("positive")</code></pre>
+        </div>
+    </div>
+    <div class="keypoint">
+        <span class="icon">🔑</span> <strong>Python 用缩进表示代码块</strong>，不用 <span class="inline-code">{}</span>。缩进是语法的一部分，不是风格选择。建议统一使用 <strong>4 个空格</strong>。
+    </div>
+
+    <h3>3.2 动态类型 vs 静态类型</h3>
+    <div class="code-compare">
+        <div class="panel cpp-panel">
+            <div class="panel-header">C++</div>
+            <pre><code>int x = 42;          // 必须声明类型
+std::string s = "hi"; // 类型固定
+// x = "hello";       // 编译错误！</code></pre>
+        </div>
+        <div class="panel py-panel">
+            <div class="panel-header">Python</div>
+            <pre><code>x = 42          # 无需声明类型
+s = "hi"        # 自动推断
+x = "hello"     # 完全合法！类型可以变</code></pre>
+        </div>
+    </div>
+
+    <div class="note">
+        <strong>实用提示：</strong>Python 3.5+ 支持 Type Hints（类型注解），可以写出类似 C++ 的类型约束：<br>
+        <span class="inline-code">x: int = 42</span>，但注解<strong>不会在运行时强制检查</strong>，它是给工具（mypy、IDE）用的。
+    </div>
+
+    <h3>3.3 注释风格</h3>
+    <div class="code-compare">
+        <div class="panel cpp-panel">
+            <div class="panel-header">C++</div>
+            <pre><code>// 单行注释
+/* 多行
+   注释 */</code></pre>
+        </div>
+        <div class="panel py-panel">
+            <div class="panel-header">Python</div>
+            <pre><code># 单行注释（Python只有这一种）
+"""
+多行字符串，常被当作
+多行注释使用
+"""</code></pre>
+        </div>
+    </div>
+
+    <h3>3.4 函数定义</h3>
+    <div class="code-compare">
+        <div class="panel cpp-panel">
+            <div class="panel-header">C++</div>
+            <pre><code>int add(int a, int b) {
+    return a + b;
+}
+
+// 默认参数
+void greet(std::string name = "World") {
+    std::cout &lt;&lt; "Hello, " &lt;&lt; name;
+}</code></pre>
+        </div>
+        <div class="panel py-panel">
+            <div class="panel-header">Python</div>
+            <pre><code>def add(a: int, b: int) -> int:
+    return a + b
+
+# 默认参数
+def greet(name: str = "World") -> None:
+    print(f"Hello, {name}")</code></pre>
+        </div>
+    </div>
+
+    <h3>3.5 Main 函数</h3>
+    <div class="code-compare">
+        <div class="panel cpp-panel">
+            <div class="panel-header">C++</div>
+            <pre><code>int main(int argc, char* argv[]) {
+    // 程序入口
+    return 0;
+}</code></pre>
+        </div>
+        <div class="panel py-panel">
+            <div class="panel-header">Python</div>
+            <pre><code>def main():
+    # 程序入口
+    pass
+
+if __name__ == "__main__":
+    main()</code></pre>
+        </div>
+    </div>
+    <div class="note">
+        <strong>为什么用 <span class="inline-code">if __name__ == "__main__"</span>？</strong><br>
+        这样当文件被其他模块 import 时，main 不会自动执行。类似 C++ 中只有包含 main 的 .cpp 才是程序入口。
+    </div>
+</section>
+
+<!-- Section 4 -->
+<section id="var-type">
+    <h2>4. 变量与数据类型</h2>
+
+    <h3>4.1 核心类型对照</h3>
+    <div class="compare-table">
+        <table>
+            <thead>
+                <tr><th>概念</th><th>C++ 类型</th><th>Python 类型</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>整数</td><td><code>int</code>, <code>long long</code></td><td><code>int</code>（任意精度，不会溢出！）</td></tr>
+                <tr><td>浮点数</td><td><code>float</code>, <code>double</code></td><td><code>float</code>（对应 C++ double）</td></tr>
+                <tr><td>布尔</td><td><code>bool</code></td><td><code>bool</code>（True/False，首字母大写）</td></tr>
+                <tr><td>字符</td><td><code>char</code></td><td>无独立类型，长度1的 <code>str</code></td></tr>
+                <tr><td>字符串</td><td><code>std::string</code></td><td><code>str</code>（内置，不可变）</td></tr>
+                <tr><td>数组</td><td><code>std::vector&lt;T&gt;</code></td><td><code>list</code>（动态数组）</td></tr>
+                <tr><td>字典</td><td><code>std::map&lt;K,V&gt;</code></td><td><code>dict</code>（哈希表，O(1)查找）</td></tr>
+                <tr><td>集合</td><td><code>std::set</code></td><td><code>set</code>（哈希集合）</td></tr>
+                <tr><td>元组</td><td><code>std::tuple</code></td><td><code>tuple</code>（不可变序列）</td></tr>
+                <tr><td>空值</td><td><code>nullptr</code></td><td><code>None</code></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>4.2 列表（对应 vector）</h3>
+    <div class="code-compare">
+        <div class="panel cpp-panel">
+            <div class="panel-header">C++</div>
+            <pre><code>std::vector&lt;int&gt; nums = {1, 2, 3};
+nums.push_back(4);
+int x = nums[0];    // 1
+nums.size();         // 4
+// 遍历
+for (int n : nums) {
+    std::cout &lt;&lt; n;
+}</code></pre>
+        </div>
+        <div class="panel py-panel">
+            <div class="panel-header">Python</div>
+            <pre><code>nums = [1, 2, 3]
+nums.append(4)
+x = nums[0]        # 1
+len(nums)          # 4
+# 遍历
+for n in nums:
+    print(n)</code></pre>
+        </div>
+    </div>
+
+    <h3>4.3 字典（对应 map）</h3>
+    <div class="code-compare">
+        <div class="panel cpp-panel">
+            <div class="panel-header">C++</div>
+            <pre><code>std::map&lt;std::string, int&gt; m;
+m["age"] = 25;
+if (m.count("age")) {
+    std::cout &lt;&lt; m["age"];
+}</code></pre>
+        </div>
+        <div class="panel py-panel">
+            <div class="panel-header">Python</div>
+            <pre><code>m = {"age": 25}
+m["age"]           # 25
+# 安全访问
+m.get("name", "N/A")  # "N/A"
+if "age" in m:
+    print(m["age"])</code></pre>
+        </div>
+    </div>
+
+    <h3>4.4 字符串操作</h3>
+    <p>Python 字符串操作远比 C++ 简洁，这是日常开发中高频使用的能力：</p>
+    <pre><code>s = "Hello, World!"
+
+# 常用操作
+s.lower()          # "hello, world!"    — C++: std::transform
+s.upper()          # "HELLO, WORLD!"
+s.split(", ")      # ["Hello", "World!"] — C++: 手动分割
+",".join(["a","b"])# "a,b"              — C++: 手动拼接
+s.replace("World", "Python")  # "Hello, Python!"
+f"pi = {3.14:.2f}" # "pi = 3.14"        — f-string 格式化
+s[7:12]            # "World"            — 切片，C++: substr
+len(s)             # 13</code></pre>
+
+    <h3>4.5 Python 独有：列表推导式</h3>
+    <p>这是 Python 最强大的特性之一，用一行代码完成 C++ 需要多行循环的工作：</p>
+    <div class="code-compare">
+        <div class="panel cpp-panel">
+            <div class="panel-header">C++</div>
+            <pre><code>std::vector&lt;int&gt; squares;
+for (int i = 0; i &lt; 10; i++) {
+    if (i % 2 == 0) {
+        squares.push_back(i * i);
+    }
+}
+// squares = {0, 4, 16, 36, 64}</code></pre>
+        </div>
+        <div class="panel py-panel">
+            <div class="panel-header">Python</div>
+            <pre><code>squares = [i * i for i in range(10) if i % 2 == 0]
+# [0, 4, 16, 36, 64]</code></pre>
+        </div>
+    </div>
+</section>
+
+<!-- Section 5 -->
+<section id="first-program">
+    <h2>5. 第一个实用脚本：C++ 头文件生成器</h2>
+    <p>来写一个真正有用的 Python 脚本——它可以根据类名自动生成 C++ 的 .h 和 .cpp 模板文件。这是 Python 辅助 C++ 开发的典型场景。</p>
+
+    <pre><code>"""
+cpp_gen.py — C++ 头文件/源文件生成器
+用法: python cpp_gen.py MyClass
+会在当前目录生成 MyClass.h 和 MyClass.cpp
+"""
+
+import sys
+import os
+
+def generate_header(class_name: str) -> str:
+    """生成 .h 文件内容"""
+    guard = f"{class_name.upper()}_H_"
+    return f"""#ifndef {guard}
+#define {guard}
+
+class {class_name} {{
+public:
+    {class_name}();
+    ~{class_name}();
+
+private:
+    // TODO: 成员变量
+}};
+
+#endif // {guard}
+"""
+
+def generate_source(class_name: str) -> str:
+    """生成 .cpp 文件内容"""
+    return f"""#include "{class_name}.h"
+
+{class_name}::{class_name}() {{
+    // TODO: 构造函数实现
+}}
+
+{class_name}::~{class_name}() {{
+    // TODO: 析构函数实现
+}}
+"""
+
+def main():
+    if len(sys.argv) < 2:
+        print(f"用法: python {sys.argv[0]} ClassName")
+        sys.exit(1)
+
+    class_name = sys.argv[1]
+
+    # 写入文件
+    with open(f"{class_name}.h", "w", encoding="utf-8") as f:
+        f.write(generate_header(class_name))
+    print(f"✓ 已生成 {class_name}.h")
+
+    with open(f"{class_name}.cpp", "w", encoding="utf-8") as f:
+        f.write(generate_source(class_name))
+    print(f"✓ 已生成 {class_name}.cpp")
+
+if __name__ == "__main__":
+    main()</code></pre>
+
+    <p>运行方式：</p>
+    <pre><code>python cpp_gen.py Player
+# 输出:
+# ✓ 已生成 Player.h
+# ✓ 已生成 Player.cpp</code></pre>
+
+    <div class="note">
+        <strong>这个脚本展示了什么？</strong><br>
+        ① <span class="inline-code">sys.argv</span> 接收命令行参数（类似 C++ 的 argc/argv）<br>
+        ② f-string 模板生成代码（比 C++ 的字符串拼接优雅太多）<br>
+        ③ <span class="inline-code">with open()</span> 自动管理文件资源（类似 C++ 的 RAII）<br>
+        ④ 类型注解 <span class="inline-code">class_name: str</span> 和 <span class="inline-code">-> str</span> 提升可读性
+    </div>
+</section>
+
+<!-- Summary -->
+<section id="summary">
+    <h2>6. 今日总结</h2>
+    <div class="summary-box">
+        <h3>📋 Day 01 知识清单</h3>
+        <ul>
+            <li>✅ Python 是 C++ 开发者的「胶水语言」，擅长构建脚本、代码生成、自动化测试</li>
+            <li>✅ Python 用缩进代替大括号，用 <span class="inline-code">:</span> 代替 <span class="inline-code">{</span></li>
+            <li>✅ 动态类型 + Type Hints，灵活且可选约束</li>
+            <li>✅ 核心类型对照：int/float/bool/str/list/dict/set/tuple</li>
+            <li>✅ f-string 是最推荐的字符串格式化方式</li>
+            <li>✅ 列表推导式：一行代码替代循环+条件+追加</li>
+            <li>✅ 虚拟环境是 Python 项目的基本规范</li>
+        </ul>
+    </div>
+
+    <div class="keypoint">
+        <span class="icon">🚀</span> <strong>明日预告 — Day 02</strong><br>
+        流程控制与函数进阶：for/while 循环的 Pythonic 写法、解包、*args/**kwargs、lambda、闭包初步，以及一个自动分析 C++ include 依赖的实用脚本。
+    </div>
+</section>
+
+</div>
+
+<div class="footer">
+    Python 辅助 C++ 开发 · Day 01 | 由 Nova 生成 🚀
+</div>
+
+</body>
+</html>

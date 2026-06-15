@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 02 — 流程控制与函数进阶 | Python for C++ Devs</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #1c2128;
+            --bg-code: #161b22;
+            --border: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #bc8cff;
+            --accent-cyan: #39d353;
+            --cpp-keyword: #ff7b72;
+            --cpp-string: #a5d6ff;
+            --cpp-comment: #8b949e;
+            --py-keyword: #ff7b72;
+            --py-string: #a5d6ff;
+            --py-builtin: #79c0ff;
+            --py-decorator: #d2a8ff;
+            --py-comment: #8b949e;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Noto Sans SC', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            font-size: 15px;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 3rem 0 2rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2.5rem;
+        }
+        .header .day-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: #fff;
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+        }
+        .header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+        }
+
+        /* TOC */
+        .toc {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2.5rem;
+        }
+        .toc h2 { font-size: 1rem; color: var(--text-secondary); margin-bottom: 0.8rem; }
+        .toc ol { padding-left: 1.5rem; }
+        .toc li { margin: 0.4rem 0; }
+        .toc a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .toc a:hover { color: var(--accent-purple); }
+
+        /* Section */
+        .section {
+            margin-bottom: 3rem;
+        }
+        .section h2 {
+            font-size: 1.5rem;
+            color: var(--accent-blue);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.2rem;
+        }
+        .section h3 {
+            font-size: 1.15rem;
+            color: var(--accent-purple);
+            margin: 1.5rem 0 0.8rem;
+        }
+        .section p {
+            margin: 0.8rem 0;
+            color: var(--text-primary);
+        }
+
+        /* Callout boxes */
+        .callout {
+            border-radius: 10px;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+            border-left: 4px solid;
+        }
+        .callout-tip {
+            background: rgba(63, 185, 80, 0.08);
+            border-left-color: var(--accent-green);
+        }
+        .callout-warn {
+            background: rgba(210, 153, 34, 0.08);
+            border-left-color: var(--accent-orange);
+        }
+        .callout-danger {
+            background: rgba(248, 81, 73, 0.08);
+            border-left-color: var(--accent-red);
+        }
+        .callout-info {
+            background: rgba(88, 166, 255, 0.08);
+            border-left-color: var(--accent-blue);
+        }
+        .callout-title {
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+        }
+        .callout-tip .callout-title { color: var(--accent-green); }
+        .callout-warn .callout-title { color: var(--accent-orange); }
+        .callout-danger .callout-title { color: var(--accent-red); }
+        .callout-info .callout-title { color: var(--accent-blue); }
+
+        /* Code comparison */
+        .code-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+            margin: 1rem 0;
+        }
+        @media (max-width: 720px) {
+            .code-compare { grid-template-columns: 1fr; }
+        }
+        .code-block {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .code-block .lang-tag {
+            display: block;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .code-block .lang-tag.cpp {
+            background: rgba(255, 123, 114, 0.15);
+            color: var(--cpp-keyword);
+        }
+        .code-block .lang-tag.python {
+            background: rgba(88, 166, 255, 0.15);
+            color: var(--accent-blue);
+        }
+        .code-block pre {
+            padding: 1rem;
+            overflow-x: auto;
+            font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        /* Inline code */
+        code {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.15em 0.4em;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 0.88em;
+            color: var(--accent-orange);
+        }
+
+        /* Syntax highlighting (simplified) */
+        .kw { color: var(--py-keyword); } /* keyword */
+        .str { color: var(--py-string); } /* string */
+        .cmt { color: var(--py-comment); font-style: italic; } /* comment */
+        .bi { color: var(--py-builtin); } /* builtin */
+        .dec { color: var(--py-decorator); } /* decorator */
+        .fn { color: var(--accent-blue); } /* function name */
+        .num { color: var(--accent-orange); } /* number */
+        .op { color: var(--text-primary); } /* operator */
+
+        /* Table */
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .compare-table th {
+            background: var(--bg-tertiary);
+            padding: 0.7rem 1rem;
+            text-align: left;
+            border: 1px solid var(--border);
+            color: var(--accent-blue);
+        }
+        .compare-table td {
+            padding: 0.6rem 1rem;
+            border: 1px solid var(--border);
+        }
+        .compare-table tr:hover td {
+            background: var(--bg-tertiary);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .footer a { color: var(--accent-blue); text-decoration: none; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<header class="header">
+    <span class="day-badge">DAY 02</span>
+    <h1>流程控制与函数进阶</h1>
+    <p class="subtitle">C++ 开发者的 Python 学习之旅 — 从 switch 到 match-case，从宏到装饰器</p>
+</header>
+
+<!-- TOC -->
+<nav class="toc">
+    <h2>📑 本节目录</h2>
+    <ol>
+        <li><a href="#s1">条件表达式 — Python 的三元运算符</a></li>
+        <li><a href="#s2">match-case — 比 switch 强大十倍</a></li>
+        <li><a href="#s3">循环进阶 — range、zip、itertools</a></li>
+        <li><a href="#s4">函数进阶 — 默认参数、*args、**kwargs</a></li>
+        <li><a href="#s5">装饰器 — Python 的杀手级特性</a></li>
+        <li><a href="#s6">生成器 — yield 的魔力</a></li>
+        <li><a href="#s7">闭包与高阶函数</a></li>
+        <li><a href="#s8">实战：C++ 构建日志分析器</a></li>
+    </ol>
+</nav>
+
+<!-- Section 1 -->
+<section class="section" id="s1">
+    <h2>1. 条件表达式 — Python 的三元运算符</h2>
+
+    <p>C++ 的三元运算符 <code>?:</code> 在 Python 中变成了更可读的 <code>if-else</code> 表达式。语法虽不同，逻辑一致：</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++</span>
+            <pre><span class="cmt">// C++ 三元运算符</span>
+<span class="kw">auto</span> label = (x > <span class="num">0</span>)
+    ? <span class="str">"positive"</span>
+    : <span class="str">"non-positive"</span>;</pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python</span>
+            <pre><span class="cmt"># Python 条件表达式</span>
+label = <span class="str">"positive"</span> <span class="kw">if</span> x > <span class="num">0</span> <span class="kw">else</span> <span class="str">"non-positive"</span></pre>
+        </div>
+    </div>
+
+    <div class="callout callout-tip">
+        <div class="callout-title">💡 Python 设计哲学</div>
+        Python 的条件表达式读起来像自然语言："positive if x > 0 else non-positive"。虽然嵌套写法也支持，但可读性会下降，建议简单场景使用。
+    </div>
+
+    <h3>短路求值的妙用</h3>
+    <p>Python 中 <code>or</code> 和 <code>and</code> 的短路行为可以用来设置默认值：</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++</span>
+            <pre><span class="cmt">// C++: 用三元或 || 运算符</span>
+<span class="kw">auto</span> name = userName.<span class="fn">empty</span>()
+    ? <span class="str">"Anonymous"</span>
+    : userName;</pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python</span>
+            <pre><span class="cmt"># Python: or 短路求值</span>
+name = user_input <span class="kw">or</span> <span class="str">"Anonymous"</span>
+<span class="cmt"># 空字符串是 falsy，所以返回 "Anonymous"</span></pre>
+        </div>
+    </div>
+</section>
+
+<!-- Section 2 -->
+<section class="section" id="s2">
+    <h2>2. match-case — 比 switch 强大十倍</h2>
+
+    <p>Python 3.10 引入的 <code>match-case</code> 不只是 <code>switch-case</code> 的翻版。它支持<strong>结构化模式匹配</strong>——可以解构、嵌套、捕获变量，这是 C++ 至今没有的语言特性。</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++</span>
+            <pre><span class="cmt">// C++: 传统 switch 只能匹配整数</span>
+<span class="kw">switch</span> (code) {
+    <span class="kw">case</span> <span class="num">200</span>: <span class="kw">return</span> <span class="str">"OK"</span>;
+    <span class="kw">case</span> <span class="num">404</span>: <span class="kw">return</span> <span class="str">"Not Found"</span>;
+    <span class="kw">default</span>:  <span class="kw">return</span> <span class="str">"Unknown"</span>;
+}</pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python</span>
+            <pre><span class="kw">match</span> code:
+    <span class="kw">case</span> <span class="num">200</span>:  <span class="kw">return</span> <span class="str">"OK"</span>
+    <span class="kw">case</span> <span class="num">404</span>:  <span class="kw">return</span> <span class="str">"Not Found"</span>
+    <span class="kw">case</span> _:     <span class="kw">return</span> <span class="str">"Unknown"</span></pre>
+        </div>
+    </div>
+
+    <h3>真正的威力：解构匹配</h3>
+
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">Python — 解构匹配</span>
+        <pre><span class="kw">def</span> <span class="fn">describe_command</span>(cmd: <span class="bi">list</span>) -> <span class="bi">str</span>:
+    <span class="kw">match</span> cmd:
+        <span class="kw">case</span> [<span class="str">"git"</span>, <span class="str">"clone"</span>, url]:       <span class="cmt"># 匹配3元素列表，捕获url</span>
+            <span class="kw">return</span> <span class="str">f"克隆仓库: {url}"</span>
+        <span class="kw">case</span> [<span class="str">"git"</span>, <span class="str">"commit"</span>, <span class="str">"-m"</span>, msg]: <span class="cmt"># 匹配4元素列表</span>
+            <span class="kw">return</span> <span class="str">f"提交: {msg}"</span>
+        <span class="kw">case</span> [<span class="str">"git"</span>, *rest]:              <span class="cmt"># *rest 捕获剩余</span>
+            <span class="kw">return</span> <span class="str">f"其他 git 命令: {rest}"</span>
+        <span class="kw">case</span> _:
+            <span class="kw">return</span> <span class="str">"未知命令"</span></pre>
+    </div>
+
+    <div class="callout callout-info">
+        <div class="callout-title">📌 C++ 开发者注意</div>
+        C++ 的 <code>switch</code> 只能匹配整型/枚举。Python 的 <code>match-case</code> 可以匹配字符串、列表、字典、对象属性——甚至嵌套结构。这是函数式语言模式匹配思想在 Python 中的落地。
+    </div>
+</section>
+
+<!-- Section 3 -->
+<section class="section" id="s3">
+    <h2>3. 循环进阶 — range、zip、itertools</h2>
+
+    <h3>range() 完整语法</h3>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++</span>
+            <pre><span class="cmt">// C++: 步进循环</span>
+<span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">5</span>; i < <span class="num">15</span>; i += <span class="num">3</span>) {
+    std::cout << i << <span class="str">" "</span>;
+}
+<span class="cmt">// 输出: 5 8 11 14</span></pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python</span>
+            <pre><span class="cmt"># Python: range(start, stop, step)</span>
+<span class="kw">for</span> i <span class="kw">in</span> <span class="bi">range</span>(<span class="num">5</span>, <span class="num">15</span>, <span class="num">3</span>):
+    <span class="bi">print</span>(i, end=<span class="str">" "</span>)
+<span class="cmt"># 输出: 5 8 11 14</span></pre>
+        </div>
+    </div>
+
+    <h3>循环的 else 子句</h3>
+    <p>这是 Python 独有的特性：<code>for...else</code> 中的 <code>else</code> 块只在循环<strong>没有被 break 中断</strong>时执行。C++ 通常用布尔标志位模拟：</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++ — 用标志位</span>
+            <pre><span class="kw">bool</span> found = <span class="kw">false</span>;
+<span class="kw">for</span> (<span class="kw">int</span> n : nums) {
+    <span class="kw">if</span> (n % <span class="num">2</span> == <span class="num">0</span>) {
+        found = <span class="kw">true</span>;
+        <span class="kw">break</span>;
+    }
+}
+<span class="kw">if</span> (!found) {
+    std::cout << <span class="str">"没有偶数"</span>;
+}</pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python — for...else</span>
+            <pre><span class="kw">for</span> n <span class="kw">in</span> nums:
+    <span class="kw">if</span> n % <span class="num">2</span> == <span class="num">0</span>:
+        <span class="bi">print</span>(<span class="str">f"找到偶数: {n}"</span>)
+        <span class="kw">break</span>
+<span class="kw">else</span>:
+    <span class="cmt"># 只有没 break 时才执行</span>
+    <span class="bi">print</span>(<span class="str">"没有偶数"</span>)</pre>
+        </div>
+    </div>
+
+    <h3>zip() — 并行遍历</h3>
+    <p>C++23 才有 <code>std::views::zip</code>，而 Python 早已标配：</p>
+
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">Python</span>
+        <pre>files = [<span class="str">"main.cpp"</span>, <span class="str">"utils.cpp"</span>, <span class="str">"parser.cpp"</span>]
+sizes = [<span class="num">2048</span>, <span class="num">1024</span>, <span class="num">4096</span>]
+
+<span class="kw">for</span> f, s <span class="kw">in</span> <span class="bi">zip</span>(files, sizes):
+    <span class="bi">print</span>(<span class="str">f"{f}: {s} bytes"</span>)
+
+<span class="cmt"># 不等长时用 zip_longest</span>
+<span class="kw">from</span> itertools <span class="kw">import</span> zip_longest
+<span class="kw">for</span> a, b <span class="kw">in</span> zip_longest(list1, list2, fillvalue=<span class="num">0</span>):
+    ...</pre>
+    </div>
+
+    <h3>itertools 速查表</h3>
+    <table class="compare-table">
+        <tr><th>itertools 工具</th><th>用途</th><th>C++ 对应</th></tr>
+        <tr><td><code>chain(a, b)</code></td><td>拼接多个可迭代对象</td><td>手动合并 vector</td></tr>
+        <tr><td><code>count(start, step)</code></td><td>无限计数器</td><td>for 循环 + 计数变量</td></tr>
+        <tr><td><code>islice(iter, n)</code></td><td>取前 n 个（惰性）</td><td>循环 + break</td></tr>
+        <tr><td><code>groupby(iter)</code></td><td>按 key 分组</td><td>std::group_by (无)</td></tr>
+        <tr><td><code>product(a, b)</code></td><td>笛卡尔积</td><td>嵌套 for 循环</td></tr>
+        <tr><td><code>permutations(iter)</code></td><td>全排列</td><td>std::next_permutation</td></tr>
+    </table>
+</section>
+
+<!-- Section 4 -->
+<section class="section" id="s4">
+    <h2>4. 函数进阶 — 默认参数、*args、**kwargs</h2>
+
+    <h3>⚠️ 可变默认参数陷阱</h3>
+    <p>这是 Python 最经典的坑之一。C++ 的默认参数在每次调用时求值，Python 的默认参数在<strong>函数定义时求值一次</strong>：</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag python">❌ 错误</span>
+            <pre><span class="kw">def</span> <span class="fn">bad_append</span>(item, lst=[]):
+    lst.<span class="fn">append</span>(item)
+    <span class="kw">return</span> lst
+
+<span class="fn">bad_append</span>(<span class="num">1</span>)  <span class="cmt"># [1]</span>
+<span class="fn">bad_append</span>(<span class="num">2</span>)  <span class="cmt"># [1, 2] ← 累积了！</span></pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">✅ 正确</span>
+            <pre><span class="kw">def</span> <span class="fn">good_append</span>(item, lst=<span class="kw">None</span>):
+    <span class="kw">if</span> lst <span class="kw">is None</span>:
+        lst = []
+    lst.<span class="fn">append</span>(item)
+    <span class="kw">return</span> lst
+
+<span class="fn">good_append</span>(<span class="num">1</span>)  <span class="cmt"># [1]</span>
+<span class="fn">good_append</span>(<span class="num">2</span>)  <span class="cmt"># [2] ✓</span></pre>
+        </div>
+    </div>
+
+    <div class="callout callout-danger">
+        <div class="callout-title">🚨 铁律</div>
+        永远不要用可变对象（<code>list</code>、<code>dict</code>、<code>set</code>）作为默认参数！用 <code>None</code> 作为哨兵值，在函数体内创建新实例。
+    </div>
+
+    <h3>*args 和 **kwargs</h3>
+    <p>C++ 的可变参数用 <code>va_list</code>（类型不安全）或模板参数包（语法复杂）。Python 的方案简洁得多：</p>
+
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">Python</span>
+        <pre><span class="kw">def</span> <span class="fn">log_message</span>(level: <span class="bi">str</span>, *args, **kwargs) -> <span class="kw">None</span>:
+    <span class="cmt"># *args → 收集多余的位置参数为 tuple</span>
+    <span class="cmt"># **kwargs → 收集多余的关键字参数为 dict</span>
+    message = <span class="str">" "</span>.<span class="fn">join</span>(<span class="bi">str</span>(a) <span class="kw">for</span> a <span class="kw">in</span> args)
+    <span class="bi">print</span>(<span class="str">f"[{level}] {message}"</span>)
+    <span class="kw">if</span> kwargs:
+        <span class="bi">print</span>(<span class="str">f"  附加: {kwargs}"</span>)
+
+<span class="fn">log_message</span>(<span class="str">"ERROR"</span>, <span class="str">"Crash"</span>, <span class="str">"at"</span>, <span class="num">0xDEAD</span>, module=<span class="str">"renderer"</span>, line=<span class="num">42</span>)
+<span class="cmt"># [ERROR] Crash at 37229</span>
+<span class="cmt">#   附加: {'module': 'renderer', 'line': 42}</span></pre>
+    </div>
+
+    <h3>强制关键字参数</h3>
+    <p>Python 允许用 <code>*</code> 分隔符强制后续参数必须用关键字传递——C++ 没有这个概念：</p>
+
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">Python</span>
+        <pre><span class="kw">def</span> <span class="fn">compile_project</span>(
+    target: <span class="bi">str</span>,          <span class="cmt"># 位置参数 ✓</span>
+    mode: <span class="bi">str</span> = <span class="str">"Release"</span>, <span class="cmt"># 位置或关键字 ✓</span>
+    *,                      <span class="cmt"># ← 分隔线！以下必须关键字传递</span>
+    verbose: <span class="bi">bool</span> = <span class="kw">False</span>,
+    jobs: <span class="bi">int</span> = <span class="num">4</span>,
+) -> <span class="kw">None</span>: ...
+
+<span class="fn">compile_project</span>(<span class="str">"MyApp"</span>, <span class="str">"Debug"</span>, verbose=<span class="kw">True</span>, jobs=<span class="num">8</span>)  <span class="cmt"># ✓</span>
+<span class="fn">compile_project</span>(<span class="str">"MyApp"</span>, <span class="str">"Debug"</span>, <span class="kw">True</span>, <span class="num">8</span>)             <span class="cmt"># ❌ TypeError!</span></pre>
+    </div>
+</section>
+
+<!-- Section 5 -->
+<section class="section" id="s5">
+    <h2>5. 装饰器 — Python 的杀手级特性</h2>
+
+    <p>装饰器是 Python 最重要的特性之一，C++ 没有直接对应物。最接近的概念是<strong>宏</strong>或<strong>CRTP</strong>，但机制完全不同。</p>
+
+    <div class="callout callout-info">
+        <div class="callout-title">📌 一句话理解装饰器</div>
+        装饰器 = 接受一个函数，返回一个增强版函数的高阶函数。本质上就是函数包裹（wrapper）。
+    </div>
+
+    <h3>计时装饰器</h3>
+
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">Python</span>
+        <pre><span class="kw">import</span> time
+<span class="kw">import</span> functools
+
+<span class="kw">def</span> <span class="dec">@timer</span>   <span class="cmt"># ← 这是装饰器的使用方式</span>
+<span class="kw">def</span> <span class="fn">timer</span>(func):
+    <span class="st">@functools.wraps</span>(func)  <span class="cmt"># 保留原函数元信息</span>
+    <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+        start = time.<span class="fn">perf_counter</span>()
+        result = <span class="fn">func</span>(*args, **kwargs)
+        elapsed = time.<span class="fn">perf_counter</span>() - start
+        <span class="bi">print</span>(<span class="str">f"⏱ {func.__name__}() 耗时 {elapsed:.6f}s"</span>)
+        <span class="kw">return</span> result
+    <span class="kw">return</span> wrapper
+
+<span class="dec">@timer</span>  <span class="cmt"># 等价于 slow_calculation = timer(slow_calculation)</span>
+<span class="kw">def</span> <span class="fn">slow_calculation</span>() -> <span class="bi">int</span>:
+    <span class="kw">return</span> <span class="bi">sum</span>(<span class="bi">range</span>(<span class="num">1000000</span>))</pre>
+    </div>
+
+    <h3>带参数的装饰器</h3>
+    <p>装饰器本身需要参数时，再加一层函数（装饰器工厂）：</p>
+
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">Python</span>
+        <pre><span class="kw">def</span> <span class="fn">retry</span>(max_attempts: <span class="bi">int</span> = <span class="num">3</span>, delay: <span class="bi">float</span> = <span class="num">1.0</span>):
+    <span class="cmt"># 第一层：接收装饰器参数</span>
+    <span class="kw">def</span> <span class="fn">decorator</span>(func):
+        <span class="cmt"># 第二层：接收被装饰的函数</span>
+        <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+            <span class="cmt"># 第三层：实际的包裹逻辑</span>
+            <span class="kw">for</span> attempt <span class="kw">in</span> <span class="bi">range</span>(<span class="num">1</span>, max_attempts + <span class="num">1</span>):
+                <span class="kw">try</span>:
+                    <span class="kw">return</span> <span class="fn">func</span>(*args, **kwargs)
+                <span class="kw">except</span> <span class="bi">Exception</span> <span class="kw">as</span> e:
+                    <span class="kw">if</span> attempt == max_attempts:
+                        <span class="kw">raise</span>
+                    time.<span class="fn">sleep</span>(delay)
+        <span class="kw">return</span> wrapper
+    <span class="kw">return</span> decorator
+
+<span class="dec">@retry</span>(max_attempts=<span class="num">3</span>, delay=<span class="num">0.5</span>)
+<span class="kw">def</span> <span class="fn">flaky_api_call</span>(url): ...</pre>
+    </div>
+
+    <table class="compare-table">
+        <tr><th>场景</th><th>C++ 做法</th><th>Python 装饰器</th></tr>
+        <tr><td>计时/性能分析</td><td>手动包裹 + 计时代码</td><td><code>@timer</code></td></tr>
+        <tr><td>重试逻辑</td><td>手写循环 + try/catch</td><td><code>@retry(n=3)</code></td></tr>
+        <tr><td>日志记录</td><td>手动插入日志语句</td><td><code>@log</code></td></tr>
+        <tr><td>权限检查</td><td>手动 if 判断</td><td><code>@require_auth</code></td></tr>
+        <tr><td>缓存结果</td><td>手动 unordered_map</td><td><code>@functools.lru_cache</code></td></tr>
+    </table>
+</section>
+
+<!-- Section 6 -->
+<section class="section" id="s6">
+    <h2>6. 生成器 — yield 的魔力</h2>
+
+    <p>生成器是 Python 处理大数据和流的利器。C++20 有协程，但语法远比 Python 复杂。Python 只需把 <code>return</code> 换成 <code>yield</code>：</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag python">普通函数 — 一次性返回</span>
+            <pre><span class="kw">def</span> <span class="fn">fib_list</span>(limit):
+    result = []
+    a, b = <span class="num">0</span>, <span class="num">1</span>
+    <span class="kw">while</span> a < limit:
+        result.<span class="fn">append</span>(a)
+        a, b = b, a + b
+    <span class="kw">return</span> result  <span class="cmt"># 一次性返回全部</span>
+
+<span class="cmt"># 如果 limit=10^9 → 内存爆炸！</span></pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">生成器 — 惰性求值</span>
+            <pre><span class="kw">def</span> <span class="fn">fib_gen</span>(limit):
+    a, b = <span class="num">0</span>, <span class="num">1</span>
+    <span class="kw">while</span> a < limit:
+        <span class="kw">yield</span> a     <span class="cmt"># 暂停，返回值</span>
+        a, b = b, a + b
+    <span class="cmt"># 无论 limit 多大，内存恒定</span>
+
+<span class="cmt"># 按需取值</span>
+<span class="kw">for</span> n <span class="kw">in</span> <span class="fn">fib_gen</span>(<span class="num">10</span>**<span class="num">9</span>):
+    <span class="kw">if</span> n > <span class="num">1000</span>: <span class="kw">break</span></pre>
+        </div>
+    </div>
+
+    <div class="callout callout-tip">
+        <div class="callout-title">💡 yield 的工作原理</div>
+        <ol style="padding-left:1.2rem;margin:0.3rem 0;">
+            <li>调用生成器函数时，函数体<strong>不立即执行</strong>，而是返回一个生成器对象</li>
+            <li>每次 <code>next()</code> 或 <code>for</code> 迭代时，执行到 <code>yield</code> 暂停</li>
+            <li>下次迭代从暂停处继续，局部变量保持不变</li>
+            <li>函数结束时抛出 <code>StopIteration</code></li>
+        </ol>
+    </div>
+
+    <h3>生成器表达式</h3>
+    <p>像列表推导式，但用圆括号，惰性求值：</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag python">列表推导式 — 立即计算</span>
+            <pre><span class="cmt"># 创建完整列表，占内存</span>
+squares = [x**<span class="num">2</span> <span class="kw">for</span> x <span class="kw">in</span> <span class="bi">range</span>(<span class="num">10</span>**<span class="num">6</span>)]
+<span class="cmt"># 内存: ~8MB</span></pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">生成器表达式 — 惰性求值</span>
+            <pre><span class="cmt"># 不创建列表，逐个计算</span>
+squares = (x**<span class="num">2</span> <span class="kw">for</span> x <span class="kw">in</span> <span class="bi">range</span>(<span class="num">10</span>**<span class="num">6</span>))
+<span class="cmt"># 内存: ~200 bytes</span></pre>
+        </div>
+    </div>
+
+    <h3>yield from — 委托子生成器</h3>
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">Python</span>
+        <pre><span class="kw">def</span> <span class="fn">flatten</span>(nested):
+    <span class="kw">for</span> item <span class="kw">in</span> nested:
+        <span class="kw">if</span> <span class="bi">isinstance</span>(item, <span class="bi">list</span>):
+            <span class="kw">yield from</span> <span class="fn">flatten</span>(item)  <span class="cmt"># 递归委托</span>
+        <span class="kw">else</span>:
+            <span class="kw">yield</span> item
+
+<span class="bi">list</span>(<span class="fn">flatten</span>([<span class="num">1</span>, [<span class="num">2</span>, <span class="num">3</span>], [<span class="num">4</span>, [<span class="num">5</span>, <span class="num">6</span>]], <span class="num">7</span>]))
+<span class="cmt"># → [1, 2, 3, 4, 5, 6, 7]</span></pre>
+    </div>
+</section>
+
+<!-- Section 7 -->
+<section class="section" id="s7">
+    <h2>7. 闭包与高阶函数</h2>
+
+    <h3>闭包</h3>
+    <p>闭包 = 函数 + 它记住的外层变量。C++ 中类似 lambda 的捕获：</p>
+
+    <div class="code-compare">
+        <div class="code-block">
+            <span class="lang-tag cpp">C++ Lambda 捕获</span>
+            <pre><span class="cmt">// C++: lambda 捕获外部变量</span>
+<span class="kw">auto</span> make_checker(<span class="kw">int</span> threshold) {
+    <span class="kw">return</span> [threshold](<span class="kw">int</span> value) {
+        <span class="kw">return</span> value >= threshold;
+    };
+}
+<span class="kw">auto</span> is_warning = make_checker(<span class="num">80</span>);
+is_warning(<span class="num">85</span>);  <span class="cmt">// true</span></pre>
+        </div>
+        <div class="code-block">
+            <span class="lang-tag python">Python 闭包</span>
+            <pre><span class="cmt"># Python: 闭包自动记住外层变量</span>
+<span class="kw">def</span> <span class="fn">make_threshold_checker</span>(threshold):
+    <span class="kw">def</span> <span class="fn">check</span>(value):
+        <span class="kw">return</span> value >= threshold  <span class="cmt"># 记住 threshold</span>
+    <span class="kw">return</span> check
+
+is_warning = <span class="fn">make_threshold_checker</span>(<span class="num">80</span>)
+is_warning(<span class="num">85</span>)  <span class="cmt"># True</span></pre>
+        </div>
+    </div>
+
+    <h3>高阶函数速查</h3>
+    <table class="compare-table">
+        <tr><th>Python</th><th>C++</th><th>说明</th></tr>
+        <tr><td><code>map(fn, iter)</code></td><td><code>std::transform</code></td><td>变换每个元素</td></tr>
+        <tr><td><code>filter(fn, iter)</code></td><td><code>std::copy_if</code></td><td>过滤元素</td></tr>
+        <tr><td><code>functools.reduce(fn, iter)</code></td><td><code>std::accumulate</code></td><td>累积归约</td></tr>
+        <tr><td><code>sorted(iter, key=fn)</code></td><td><code>std::sort + comp</code></td><td>排序（返回新列表）</td></tr>
+        <tr><td><code>any(iter)</code></td><td><code>std::any_of</code></td><td>任一为真</td></tr>
+        <tr><td><code>all(iter)</code></td><td><code>std::all_of</code></td><td>全部为真</td></tr>
+    </table>
+
+    <div class="callout callout-tip">
+        <div class="callout-title">💡 Pythonic 建议</div>
+        列表推导式通常比 <code>map</code>/<code>filter</code> 更 Pythonic、更可读。<code>sorted</code> 的 <code>key</code> 参数则是 Python 中最常用的高阶函数模式，务必掌握。
+    </div>
+</section>
+
+<!-- Section 8 -->
+<section class="section" id="s8">
+    <h2>8. 实战：C++ 构建日志分析器</h2>
+
+    <p>综合运用今天学到的所有知识，写一个实用的 C++ 构建日志分析工具。它能够：</p>
+    <ul style="padding-left:1.5rem;margin:0.5rem 0;">
+        <li>解析 CMake/Make 构建输出</li>
+        <li>统计警告数量和类别</li>
+        <li>统计错误详情</li>
+        <li>分析各 target 编译耗时</li>
+        <li>生成可视化报告</li>
+    </ul>
+
+    <div class="code-block" style="max-width:100%;">
+        <span class="lang-tag python">build_log_analyzer.py — 核心逻辑</span>
+        <pre><span class="kw">class</span> <span class="fn">BuildLogAnalyzer</span>:
+    <span class="cmt"># 正则匹配警告/错误/编译时间</span>
+    WARNING_PATTERNS = [
+        re.<span class="fn">compile</span>(<span class="str">r"warning\s*:"</span>, re.IGNORECASE),
+        re.<span class="fn">compile</span>(<span class="str">r"\[-W\w+\]"</span>),  <span class="cmt"># GCC 警告标签</span>
+    ]
+
+    <span class="kw">def</span> <span class="fn">analyze</span>(self) -> <span class="bi">dict</span>:
+        <span class="cmt"># 用生成器表达式过滤</span>
+        warnings = <span class="bi">list</span>(<span class="bi">filter</span>(
+            <span class="kw">lambda</span> l: <span class="str">"warning"</span> <span class="kw">in</span> l.<span class="fn">lower</span>(),
+            self.lines
+        ))
+        <span class="cmt"># 用 sorted + lambda 按耗时排序</span>
+        sorted_targets = <span class="bi">sorted</span>(
+            self.target_times.<span class="fn">items</span>(),
+            key=<span class="kw">lambda</span> x: x[<span class="num">1</span>],
+            reverse=<span class="kw">True</span>
+        )
+        ...</pre>
+    </div>
+
+    <div class="callout callout-info">
+        <div class="callout-title">🚀 运行方式</div>
+        <pre style="margin:0.3rem 0;color:var(--text-primary);font-family:monospace;font-size:0.85rem;"># 分析真实构建日志
+python build_log_analyzer.py build_output.log
+
+# 配合管道使用
+cmake --build build 2>&1 | python build_log_analyzer.py -
+
+# 使用内置示例
+python build_log_analyzer.py --demo</pre>
+    </div>
+</section>
+
+<!-- Summary -->
+<section class="section">
+    <h2>📋 Day 02 总结</h2>
+    <table class="compare-table">
+        <tr><th>知识点</th><th>C++ 对应</th><th>Python 优势</th></tr>
+        <tr><td>条件表达式</td><td><code>? :</code> 三元运算符</td><td>更可读的自然语言风格</td></tr>
+        <tr><td>match-case</td><td><code>switch</code></td><td>结构化模式匹配，远超 switch</td></tr>
+        <tr><td>for...else</td><td>布尔标志位</td><td>消除标志位变量</td></tr>
+        <tr><td>zip / itertools</td><td>手写循环/STL 算法</td><td>内置、简洁、惰性</td></tr>
+        <tr><td>*args / **kwargs</td><td>va_list / 模板参数包</td><td>类型安全、极简语法</td></tr>
+        <tr><td>装饰器</td><td>宏 / CRTP</td><td>优雅的 AOP 模式</td></tr>
+        <tr><td>生成器</td><td>协程 / 迭代器类</td><td>一个 yield 搞定</td></tr>
+        <tr><td>闭包</td><td>lambda 捕获</td><td>自动捕获，无需显式声明</td></tr>
+    </table>
+
+    <div class="callout callout-warn">
+        <div class="callout-title">⚠️ 今天最重要的三个注意事项</div>
+        <ol style="padding-left:1.2rem;margin:0.3rem 0;">
+            <li><strong>可变默认参数</strong> — 永远用 <code>None</code> 代替 <code>[]</code>/<code>{}</code></li>
+            <li><strong>装饰器记得 <code>@functools.wraps</code></strong> — 否则原函数元信息丢失</li>
+            <li><strong>生成器只能遍历一次</strong> — 需要重复使用就转成 list</li>
+        </ol>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <p>Python for C++ Devs — Day 02 | 生成于 2026-06-10</p>
+    <p>配套脚本: <code>day02_basics.py</code> | <code>build_log_analyzer.py</code></p>
+</footer>
+
+</div>
+</body>
+</html>

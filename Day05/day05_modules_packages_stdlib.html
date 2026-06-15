@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 05: 模块、包与标准库</title>
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --bg2: #282a36;
+    --bg3: #313244;
+    --fg: #cdd6f4;
+    --fg2: #a6adc8;
+    --accent: #89b4fa;
+    --accent2: #f38ba8;
+    --accent3: #a6e3a1;
+    --accent4: #fab387;
+    --accent5: #cba6f7;
+    --code-bg: #181825;
+    --border: #45475a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 { color: var(--accent); font-size: 2rem; margin-bottom: 0.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+  h2 { color: var(--accent5); font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 0.8rem; border-left: 4px solid var(--accent5); padding-left: 0.8rem; }
+  h3 { color: var(--accent3); font-size: 1.2rem; margin-top: 1.8rem; margin-bottom: 0.5rem; }
+  .subtitle { color: var(--fg2); font-size: 1rem; margin-bottom: 2rem; }
+  p { margin: 0.8rem 0; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  .compare > div { background: var(--bg2); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .compare .label { padding: 0.4rem 0.8rem; font-weight: bold; font-size: 0.85rem; }
+  .compare .label.cpp { background: var(--accent2); color: #1e1e2e; }
+  .compare .label.py { background: var(--accent3); color: #1e1e2e; }
+  pre { background: var(--code-bg); border-radius: 6px; padding: 1rem; overflow-x: auto; margin: 0.5rem 0.8rem 0.8rem; font-size: 0.88rem; line-height: 1.6; border: 1px solid var(--border); }
+  code { font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; }
+  .inline { background: var(--bg3); padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; color: var(--accent); }
+  .tip { background: var(--bg2); border-left: 4px solid var(--accent4); padding: 1rem 1.2rem; margin: 1.2rem 0; border-radius: 0 8px 8px 0; }
+  .tip b { color: var(--accent4); }
+  .warn { background: var(--bg2); border-left: 4px solid var(--accent2); padding: 1rem 1.2rem; margin: 1.2rem 0; border-radius: 0 8px 8px 0; }
+  .warn b { color: var(--accent2); }
+  .practice { background: var(--bg2); border: 1px solid var(--accent); border-radius: 8px; padding: 1rem 1.2rem; margin: 1.5rem 0; }
+  .practice b { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+  th { background: var(--bg3); color: var(--accent); padding: 0.6rem; text-align: left; border: 1px solid var(--border); }
+  td { padding: 0.5rem 0.6rem; border: 1px solid var(--border); }
+  tr:hover td { background: var(--bg3); }
+  .kw { color: #cba6f7; }
+  .str { color: #a6e3a1; }
+  .cmt { color: #6c7086; font-style: italic; }
+  .fn { color: #89b4fa; }
+  .num { color: #fab387; }
+  .dec { color: #f38ba8; }
+  .op { color: #89dceb; }
+  .toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.5rem; margin: 1.5rem 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc ul { padding-left: 1.5rem; }
+  .toc li { margin: 0.3rem 0; }
+  .badge { display: inline-block; background: var(--accent); color: #1e1e2e; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: bold; vertical-align: middle; }
+  .badge.cpp-badge { background: var(--accent2); }
+  .badge.py-badge { background: var(--accent3); }
+  @media (max-width: 700px) {
+    .compare { grid-template-columns: 1fr; }
+    body { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Day 05: 模块、包与标准库</h1>
+<p class="subtitle">从 C++ 的 #include 和 namespace 到 Python 的 import 体系 — 理解 Python 模块化设计的哲学</p>
+
+<div class="toc">
+  <b>目录</b>
+  <ul>
+    <li><a href="#s1">1. 模块基础：import 的多种姿势</a></li>
+    <li><a href="#s2">2. 模块搜索路径与 __name__</a></li>
+    <li><a href="#s3">3. 包（Package）与 __init__.py</a></li>
+    <li><a href="#s4">4. 相对导入 vs 绝对导入</a></li>
+    <li><a href="#s5">5. 标准库精选：C++ 开发者必备工具</a></li>
+    <li><a href="#s6">6. 第三方包管理：pip 与虚拟环境</a></li>
+    <li><a href="#s7">7. 实战：C++ 项目的 Python 工具模块</a></li>
+  </ul>
+</div>
+
+<!-- ========== Section 1 ========== -->
+<h2 id="s1">1. 模块基础：import 的多种姿势</h2>
+
+<p>在 C++ 中，我们用 <code class="inline">#include</code> 引入头文件，用 <code class="inline">namespace</code> 组织代码。Python 的 <code class="inline">import</code> 同时承担了这两项职责，而且更灵活。</p>
+
+<div class="compare">
+  <div>
+    <div class="label cpp">C++ — #include + namespace</div>
+    <pre><code><span class="cmt">// mylib.h</span>
+<span class="kw">#pragma once</span>
+<span class="kw">namespace</span> mylib {
+    <span class="kw">int</span> <span class="fn">add</span>(<span class="kw">int</span> a, <span class="kw">int</span> b);
+    <span class="kw">constexpr int</span> VERSION = <span class="num">2</span>;
+}
+
+<span class="cmt">// main.cpp</span>
+<span class="kw">#include</span> <span class="str">"mylib.h"</span>
+<span class="kw">using namespace</span> mylib; <span class="cmt">// 引入整个命名空间</span>
+<span class="kw">int</span> <span class="fn">main</span>() {
+    <span class="kw">int</span> r = <span class="fn">add</span>(<span class="num">1</span>, <span class="num">2</span>);
+    <span class="kw">return</span> <span class="num">0</span>;
+}</code></pre>
+  </div>
+  <div>
+    <div class="label py">Python — import 多种写法</div>
+    <pre><code><span class="cmt"># mylib.py</span>
+<span class="kw">def</span> <span class="fn">add</span>(a, b):
+    <span class="kw">return</span> a + b
+
+VERSION = <span class="num">2</span>
+
+<span class="cmt"># main.py</span>
+<span class="kw">import</span> mylib                    <span class="cmt"># 导入整个模块</span>
+r = mylib.<span class="fn">add</span>(<span class="num">1</span>, <span class="num">2</span>)
+
+<span class="kw">from</span> mylib <span class="kw">import</span> add           <span class="cmt"># 只导入特定名称</span>
+r = <span class="fn">add</span>(<span class="num">1</span>, <span class="num">2</span>)
+
+<span class="kw">from</span> mylib <span class="kw">import</span> add <span class="kw">as</span> plus  <span class="cmt"># 别名</span>
+r = <span class="fn">plus</span>(<span class="num">1</span>, <span class="num">2</span>)
+
+<span class="kw">from</span> mylib <span class="kw">import</span> *           <span class="cmt"># 不推荐！</span></code></pre>
+  </div>
+</div>
+
+<h3>核心区别</h3>
+<table>
+  <tr><th>特性</th><th>C++ #include</th><th>Python import</th></tr>
+  <tr><td>机制</td><td>预编译期文本替换</td><td>运行时加载模块对象</td></tr>
+  <tr><td>重复包含</td><td>需 #pragma once / include guard</td><td>自动缓存，只加载一次</td></tr>
+  <tr><td>选择性导入</td><td>不支持，只能全部引入</td><td>支持 from X import Y</td></tr>
+  <tr><td>别名</td><td>namespace alias</td><td>import as</td></tr>
+  <tr><td>循环引用</td><td>编译错误</td><td>运行时可能出问题（需注意）</td></tr>
+</table>
+
+<div class="warn">
+  <b>注意</b>：避免使用 <code class="inline">from module import *</code>，它会污染命名空间，且无法追踪名称来源，相当于 C++ 中的 <code class="inline">using namespace std;</code> 在头文件中滥用。
+</div>
+
+<!-- ========== Section 2 ========== -->
+<h2 id="s2">2. 模块搜索路径与 __name__</h2>
+
+<p>Python 查找模块时，按以下顺序搜索路径（类似 C++ 的 include path 但更灵活）：</p>
+
+<pre><code><span class="kw">import</span> sys
+<span class="fn">print</span>(sys.path)
+<span class="cmt"># 输出类似：</span>
+<span class="cmt"># ['',                          # 当前目录（脚本所在目录）</span>
+<span class="cmt">#  'C:\\Python312\\Lib',          # 标准库</span>
+<span class="cmt">#  'C:\\Python312\\DLLs',</span>
+<span class="cmt">#  'C:\\Users\\you\\AppData\\...\\site-packages']  # 第三方包</span>
+
+<span class="cmt"># 添加自定义搜索路径（类似 C++ 的 -I 选项）</span>
+sys.path.<span class="fn">append</span>(<span class="str">'D:/my_cpp_tools/python'</span>)</code></pre>
+
+<h3>__name__ 与模块测试</h3>
+<p>这是 C++ 没有的概念：每个 .py 文件都能判断自己是被导入还是直接运行。</p>
+
+<div class="compare">
+  <div>
+    <div class="label cpp">C++ — 分离测试与库</div>
+    <pre><code><span class="cmt">// mylib.cpp — 必须单独写测试文件</span>
+<span class="cmt">// test_mylib.cpp</span>
+<span class="kw">#include</span> <span class="str">"mylib.h"</span>
+<span class="kw">#include</span> <span class="str">&lt;cassert&gt;</span>
+<span class="kw">int</span> <span class="fn">main</span>() {
+    <span class="fn">assert</span>(<span class="fn">add</span>(<span class="num">1</span>,<span class="num">2</span>) == <span class="num">3</span>);
+}</code></pre>
+  </div>
+  <div>
+    <div class="label py">Python — 同文件内测试</div>
+    <pre><code><span class="cmt"># mylib.py</span>
+<span class="kw">def</span> <span class="fn">add</span>(a, b):
+    <span class="kw">return</span> a + b
+
+<span class="cmt"># 直接运行时执行，被导入时跳过</span>
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    <span class="fn">assert</span> <span class="fn">add</span>(<span class="num">1</span>, <span class="num">2</span>) == <span class="num">3</span>
+    <span class="fn">print</span>(<span class="str">"All tests passed!"</span>)</code></pre>
+  </div>
+</div>
+
+<div class="tip">
+  <b>技巧</b>：Python 模块被首次导入时会从头执行一遍（只一次），模块对象被缓存在 <code class="inline">sys.modules</code> 中。后续 import 直接返回缓存对象，类似 C++ 的 include guard 效果。
+</div>
+
+<!-- ========== Section 3 ========== -->
+<h2 id="s3">3. 包（Package）与 __init__.py</h2>
+
+<p>Python 的"包"对应 C++ 项目中的目录结构 + CMake 组织方式，但更轻量。</p>
+
+<h3>目录结构对比</h3>
+<div class="compare">
+  <div>
+    <div class="label cpp">C++ 项目结构</div>
+    <pre><code>my_project/
+├── CMakeLists.txt
+├── include/
+│   └── myproject/
+│       ├── core.h
+│       └── utils.h
+├── src/
+│   ├── core.cpp
+│   └── utils.cpp
+└── tests/
+    └── test_core.cpp</code></pre>
+  </div>
+  <div>
+    <div class="label py">Python 包结构</div>
+    <pre><code>my_project/
+├── pyproject.toml       <span class="cmt"># 类似 CMakeLists.txt</span>
+├── myproject/           <span class="cmt"># 包目录</span>
+│   ├── __init__.py      <span class="cmt"># 包标识 + 初始化</span>
+│   ├── core.py
+│   └── utils.py
+└── tests/
+    └── test_core.py</code></pre>
+  </div>
+</div>
+
+<h3>__init__.py 的作用</h3>
+<pre><code><span class="cmt"># myproject/__init__.py</span>
+<span class="cmt"># 1. 标记目录为 Python 包（Python 3.3+ 可省略，但建议保留）</span>
+<span class="cmt"># 2. 包级初始化代码</span>
+<span class="cmt"># 3. 控制 from myproject import * 的导出内容</span>
+
+<span class="kw">from</span> .core <span class="kw">import</span> App, Config   <span class="cmt"># 简化外部导入路径</span>
+<span class="kw">from</span> .utils <span class="kw">import</span> helpers
+
+__version__ = <span class="str">"1.0.0"</span>
+__all__ = [<span class="str">"App"</span>, <span class="str">"Config"</span>, <span class="str">"helpers"</span>]  <span class="cmt"># import * 时只导出这些</span>
+
+<span class="cmt"># 外部使用：</span>
+<span class="cmt"># from myproject import App  （而不是 from myproject.core import App）</span></code></pre>
+
+<div class="tip">
+  <b>类比</b>：<code class="inline">__init__.py</code> 类似 C++ 头文件中的"聚合头文件"（如 <code class="inline">#include "myproject/all.h"</code>），它把子模块的公开 API 重新导出，简化用户导入路径。
+</div>
+
+<!-- ========== Section 4 ========== -->
+<h2 id="s4">4. 相对导入 vs 绝对导入</h2>
+
+<div class="compare">
+  <div>
+    <div class="label cpp">C++ — 包含路径</div>
+    <pre><code><span class="cmt">// 绝对路径（推荐）</span>
+<span class="kw">#include</span> <span class="str">"myproject/core.h"</span>
+
+<span class="cmt">// 相对路径（脆弱）</span>
+<span class="kw">#include</span> <span class="str">"../core.h"</span>  <span class="cmt">// 不推荐</span>
+
+<span class="cmt">// C++ 没有真正的"相对包含"</span>
+<span class="cmt">// 依赖 -I 编译选项</span></code></pre>
+  </div>
+  <div>
+    <div class="label py">Python — 导入方式</div>
+    <pre><code><span class="cmt"># 绝对导入（推荐）</span>
+<span class="kw">from</span> myproject.core <span class="kw">import</span> App
+
+<span class="cmt"># 相对导入（包内部使用）</span>
+<span class="kw">from</span> .core <span class="kw">import</span> App      <span class="cmt"># 同级</span>
+<span class="kw">from</span> ..utils <span class="kw">import</span> foo   <span class="cmt"># 上级</span>
+<span class="kw">from</span> . <span class="kw">import</span> core         <span class="cmt"># 导入同级模块</span>
+
+<span class="cmt"># 相对导入只在包内部有效</span>
+<span class="cmt"># 直接运行含相对导入的脚本会报错！</span></code></pre>
+  </div>
+</div>
+
+<div class="warn">
+  <b>常见坑</b>：直接运行包内的 .py 文件（如 <code class="inline">python myproject/core.py</code>），相对导入会报 <code class="inline">ImportError</code>。必须用 <code class="inline">python -m myproject.core</code> 或在包外运行。
+</div>
+
+<!-- ========== Section 5 ========== -->
+<h2 id="s5">5. 标准库精选：C++ 开发者必备工具</h2>
+
+<p>Python 标准库是它的"超能力"之一 — C++ 需要 Boost/第三方库才能实现的功能，Python 往往内置了。</p>
+
+<h3>5.1 os / pathlib — 文件系统操作</h3>
+<div class="compare">
+  <div>
+    <div class="label cpp">C++17 filesystem</div>
+    <pre><code><span class="kw">#include</span> <span class="str">&lt;filesystem&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;iostream&gt;</span>
+<span class="kw">namespace</span> fs = std::filesystem;
+
+<span class="cmt">// 遍历目录</span>
+<span class="kw">for</span> (<span class="kw">auto</span>&amp; entry : fs::directory_iterator(<span class="str">"src"</span>)) {
+    std::cout &lt;&lt; entry.path() &lt;&lt; <span class="str">"\n"</span>;
+}
+
+<span class="cmt">// 路径拼接</span>
+<span class="kw">auto</span> p = fs::path(<span class="str">"src"</span>) / <span class="str">"main.cpp"</span>;
+
+<span class="cmt">// 检查是否存在</span>
+<span class="kw">bool</span> exists = fs::exists(p);</code></pre>
+  </div>
+  <div>
+    <div class="label py">Python pathlib</div>
+    <pre><code><span class="kw">from</span> pathlib <span class="kw">import</span> Path
+
+<span class="cmt"># 遍历目录</span>
+<span class="kw">for</span> entry <span class="kw">in</span> Path(<span class="str">"src"</span>).<span class="fn">iterdir</span>():
+    <span class="fn">print</span>(entry)
+
+<span class="cmt"># 路径拼接（用 / 运算符！）</span>
+p = Path(<span class="str">"src"</span>) / <span class="str">"main.cpp"</span>
+
+<span class="cmt"># 检查是否存在</span>
+exists = p.<span class="fn">exists</span>()
+
+<span class="cmt"># 递归查找所有 .cpp 文件</span>
+cpps = <span class="fn">list</span>(Path(<span class="str">"src"</span>).<span class="fn">rglob</span>(<span class="str">"*.cpp"</span>))</code></pre>
+  </div>
+</div>
+
+<div class="tip">
+  <b>推荐</b>：优先使用 <code class="inline">pathlib</code> 而非 <code class="inline">os.path</code>。pathlib 的 <code class="inline">/</code> 运算符拼接路径比 <code class="inline">os.path.join()</code> 更直观，且跨平台。
+</div>
+
+<h3>5.2 json — 配置文件处理</h3>
+<pre><code><span class="kw">import</span> json
+
+<span class="cmt"># 读取 JSON 配置（C++ 项目常用场景）</span>
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"compile_commands.json"</span>) <span class="kw">as</span> f:
+    data = json.<span class="fn">load</span>(f)    <span class="cmt"># 直接解析为 Python 对象</span>
+
+<span class="cmt"># 查找所有 .cpp 编译命令</span>
+cpp_entries = [e <span class="kw">for</span> e <span class="kw">in</span> data <span class="kw">if</span> e[<span class="str">"file"</span>].<span class="fn">endswith</span>(<span class="str">".cpp"</span>)]
+
+<span class="cmt"># 写入 JSON</span>
+config = {<span class="str">"compiler"</span>: <span class="str">"clang++"</span>, <span class="str">"flags"</span>: [<span class="str">"-std=c++20"</span>, <span class="str">"-O2"</span>]}
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"config.json"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f:
+    json.<span class="fn">dump</span>(config, f, indent=<span class="num">2</span>)</code></pre>
+
+<h3>5.3 collections — 高级数据结构</h3>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> defaultdict, Counter, namedtuple
+
+<span class="cmt"># defaultdict — 不用检查 key 是否存在（类似 C++ map[]）</span>
+groups = defaultdict(<span class="fn">list</span>)
+<span class="kw">for</span> name, ext <span class="kw">in</span> [(<span class="str">"main"</span>, <span class="str">".cpp"</span>), (<span class="str">"utils"</span>, <span class="str">".h"</span>), (<span class="str">"core"</span>, <span class="str">".cpp"</span>)]:
+    groups[ext].<span class="fn">append</span>(name)
+<span class="cmt"># {".cpp": ["main", "core"], ".h": ["utils"]}</span>
+
+<span class="cmt"># Counter — 统计频率</span>
+word_counts = Counter([<span class="str">"error"</span>, <span class="str">"warning"</span>, <span class="str">"error"</span>, <span class="str">"error"</span>])
+<span class="fn">print</span>(word_counts.<span class="fn">most_common</span>(<span class="num">1</span>))  <span class="cmt"># [("error", 3)]</span>
+
+<span class="cmt"># namedtuple — 轻量级结构体（类似 C++ struct）</span>
+CompileResult = <span class="fn">namedtuple</span>(<span class="str">"CompileResult"</span>, [<span class="str">"success"</span>, <span class="str">"output"</span>, <span class="str">"errors"</span>])
+result = CompileResult(<span class="kw">True</span>, <span class="str">"obj/main.o"</span>, [])
+<span class="fn">print</span>(result.success)  <span class="cmt"># 按名称访问</span></code></pre>
+
+<h3>5.4 argparse — 命令行参数解析</h3>
+<div class="compare">
+  <div>
+    <div class="label cpp">C++ 手动解析或用第三方库</div>
+    <pre><code><span class="cmt">// C++ 没有内置参数解析</span>
+<span class="cmt">// 常用：CLI11, cxxopts, getopt</span>
+<span class="kw">#include</span> <span class="str">&lt;CLI/CLI.hpp&gt;</span>
+CLI::App app{<span class="str">"Build tool"</span>};
+<span class="kw">int</span> jobs = <span class="num">4</span>;
+app.<span class="fn">add_option</span>(<span class="str">"-j,--jobs"</span>, jobs);
+app.<span class="fn">parse</span>(argc, argv);</code></pre>
+  </div>
+  <div>
+    <div class="label py">Python argparse（内置）</div>
+    <pre><code><span class="kw">import</span> argparse
+
+parser = argparse.<span class="fn">ArgumentParser</span>(description=<span class="str">"Build tool"</span>)
+parser.<span class="fn">add_argument</span>(<span class="str">"-j"</span>, <span class="str">"--jobs"</span>, <span class="kw">type</span>=<span class="fn">int</span>, default=<span class="num">4</span>)
+parser.<span class="fn">add_argument</span>(<span class="str">"targets"</span>, nargs=<span class="str">"*"</span>)
+args = parser.<span class="fn">parse_args</span>()
+
+<span class="fn">print</span>(f<span class="str">"Building with {args.jobs} jobs"</span>)
+<span class="fn">print</span>(f<span class="str">"Targets: {args.targets}"</span>)</code></pre>
+  </div>
+</div>
+
+<h3>5.5 其他常用标准库速查</h3>
+<table>
+  <tr><th>模块</th><th>用途</th><th>C++ 对应</th></tr>
+  <tr><td><code class="inline">shutil</code></td><td>文件复制/移动/删除目录树</td><td>std::filesystem（部分）</td></tr>
+  <tr><td><code class="inline">tempfile</code></td><td>临时文件/目录</td><td>std::filesystem::temp_directory_path</td></tr>
+  <tr><td><code class="inline">logging</code></td><td>日志系统</td><td>spdlog / glog</td></tr>
+  <tr><td><code class="inline">dataclasses</code></td><td>自动生成 __init__ 等的类</td><td>C++ struct + 构造函数</td></tr>
+  <tr><td><code class="inline">enum</code></td><td>枚举类型</td><td>enum / enum class</td></tr>
+  <tr><td><code class="inline">itertools</code></td><td>迭代器工具</td><td>无直接对应（需手写或用 ranges）</td></tr>
+  <tr><td><code class="inline">functools</code></td><td>函数工具（lru_cache, partial）</td><td>std::function + 手写缓存</td></tr>
+  <tr><td><code class="inline">hashlib</code></td><td>哈希算法</td><td>OpenSSL / 手写</td></tr>
+  <tr><td><code class="inline">configparser</code></td><td>INI 配置文件</td><td>iniparser（第三方）</td></tr>
+</table>
+
+<!-- ========== Section 6 ========== -->
+<h2 id="s6">6. 第三方包管理：pip 与虚拟环境</h2>
+
+<p>C++ 用 vcpkg/conan 管理依赖，Python 用 pip。但 Python 还需要"虚拟环境"来隔离项目依赖 — 这在 C++ 中不太常见（C++ 通过不同 build 目录实现类似效果）。</p>
+
+<h3>虚拟环境</h3>
+<pre><code><span class="cmt"># 创建虚拟环境（类似 C++ 的 out-of-source build 目录）</span>
+python -m venv .venv
+
+<span class="cmt"># 激活（Windows）</span>
+.venv\Scripts\activate
+
+<span class="cmt"># 激活（Linux/Mac）</span>
+source .venv/bin/activate
+
+<span class="cmt"># 安装包</span>
+pip install pybind11 cmake-format
+
+<span class="cmt"># 导出依赖清单（类似 CMake 的 find_package 列表）</span>
+pip freeze > requirements.txt
+
+<span class="cmt"># 在新环境还原</span>
+pip install -r requirements.txt</code></pre>
+
+<div class="tip">
+  <b>最佳实践</b>：每个 Python 项目都应使用虚拟环境。将 <code class="inline">.venv/</code> 加入 <code class="inline">.gitignore</code>，但提交 <code class="inline">requirements.txt</code>。
+</div>
+
+<!-- ========== Section 7 ========== -->
+<h2 id="s7">7. 实战：C++ 项目的 Python 工具模块</h2>
+
+<p>下面是一个实际可用的工具模块结构，用于辅助 C++ 项目开发：</p>
+
+<pre><code><span class="cmt"># cppdev/  — 包目录</span>
+<span class="cmt"># ├── __init__.py</span>
+<span class="cmt"># ├── scanner.py     — 扫描 C++ 源文件</span>
+<span class="cmt"># ├── builder.py     — 构建辅助</span>
+<span class="cmt"># └── analyzer.py    — 代码分析</span>
+
+<span class="cmt"># cppdev/__init__.py</span>
+<span class="str">"""C++ Development Helper Tools."""</span>
+<span class="kw">from</span> .scanner <span class="kw">import</span> scan_sources
+<span class="kw">from</span> .builder <span class="kw">import</span> build_project
+
+__version__ = <span class="str">"0.1.0"</span>
+__all__ = [<span class="str">"scan_sources"</span>, <span class="str">"build_project"</span>]
+
+<span class="cmt"># cppdev/scanner.py</span>
+<span class="str">"""Scan C++ source files in a project."""</span>
+<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+<span class="kw">from</span> collections <span class="kw">import</span> defaultdict
+
+<span class="kw">def</span> <span class="fn">scan_sources</span>(root: <span class="fn">str</span> | Path) -> <span class="fn">dict</span>:
+    <span class="str">"""扫描目录下的 C++ 源文件，按类型分组。"""</span>
+    root = Path(root)
+    groups = defaultdict(<span class="fn">list</span>)
+
+    <span class="kw">for</span> ext <span class="kw">in</span> [<span class="str">"*.cpp"</span>, <span class="str">"*.h"</span>, <span class="str">"*.hpp"</span>, <span class="str">"*.cc"</span>]:
+        <span class="kw">for</span> f <span class="kw">in</span> root.<span class="fn">rglob</span>(ext):
+            groups[ext.lstrip(<span class="str">"*"</span>)].<span class="fn">append</span>(<span class="fn">str</span>(f))
+
+    <span class="kw">return</span> <span class="fn">dict</span>(groups)
+
+<span class="cmt"># 使用：</span>
+<span class="cmt"># from cppdev import scan_sources</span>
+<span class="cmt"># files = scan_sources("D:/my_project/src")</span>
+<span class="cmt"># print(files[".cpp"])  # 所有 .cpp 文件列表</span></code></pre>
+
+<div class="practice">
+  <b>练习</b>
+  <ol>
+    <li>创建一个 <code class="inline">cppdev</code> 包，包含 <code class="inline">__init__.py</code> 和至少两个子模块</li>
+    <li>实现 <code class="inline">scan_sources()</code>，扫描指定目录下的 C++ 文件并按扩展名分组</li>
+    <li>用 <code class="inline">__name__ == "__main__"</code> 为每个模块添加自测代码</li>
+    <li>使用 <code class="inline">argparse</code> 让工具支持命令行调用</li>
+    <li>创建 <code class="inline">requirements.txt</code>（即使暂时无第三方依赖也建议创建）</li>
+  </ol>
+</div>
+
+<h2>Day 05 小结</h2>
+<table>
+  <tr><th>Python 概念</th><th>C++ 对应</th><th>关键区别</th></tr>
+  <tr><td>import</td><td>#include + using</td><td>运行时加载，自动去重</td></tr>
+  <tr><td>包 (__init__.py)</td><td>目录 + CMakeLists</td><td>更轻量，无需构建系统定义</td></tr>
+  <tr><td>__name__</td><td>无直接对应</td><td>自测模式，C++ 需单独测试文件</td></tr>
+  <tr><td>sys.path</td><td>-I 编译选项</td><td>运行时可修改</td></tr>
+  <tr><td>pathlib</td><td>std::filesystem</td><td>API 更简洁</td></tr>
+  <tr><td>pip + venv</td><td>vcpkg/conan</td><td>虚拟环境隔离依赖</td></tr>
+</table>
+
+<p style="margin-top: 2rem; color: var(--fg2);">Day 06 预告：正则表达式与文本处理 — 用 Python 高效处理日志、提取编译信息。</p>
+
+</body>
+</html>

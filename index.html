@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>每日Py — Python 辅助 C++ 开发</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #161822;
+            --card: #1c1f2e;
+            --border: #2a2d3e;
+            --fg: #e4e6f0;
+            --muted: #8b8fa3;
+            --accent: #4fc3f7;
+            --accent2: #7c4dff;
+            --green: #66bb6a;
+            --orange: #ffa726;
+            --yellow: #ffee58;
+            --code-bg: #12131a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.8;
+        }
+
+        /* ===== HERO ===== */
+        .hero {
+            background: linear-gradient(135deg, #1a1c2e 0%, #0f1117 50%, #12131f 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 72px 24px 56px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -80px; left: -80px;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(79,195,247,0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -60px; right: -60px;
+            width: 250px; height: 250px;
+            background: radial-gradient(circle, rgba(124,77,255,0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero .badge {
+            display: inline-block;
+            background: rgba(79,195,247,0.12);
+            border: 1px solid rgba(79,195,247,0.3);
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 4px 14px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+        }
+        .hero h1 {
+            font-size: clamp(30px, 6vw, 52px);
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.15;
+            margin-bottom: 16px;
+        }
+        .hero h1 .py { color: var(--yellow); }
+        .hero h1 .cpp { color: var(--accent); }
+        .hero p {
+            color: var(--muted);
+            font-size: 15px;
+            max-width: 560px;
+            margin: 0 auto 24px;
+        }
+        .hero .meta {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .hero .meta span { display: flex; align-items: center; gap: 6px; }
+
+        /* ===== LAYOUT ===== */
+        .container { max-width: 860px; margin: 0 auto; padding: 56px 24px 80px; }
+
+        .section-label {
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .section-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 28px;
+        }
+
+        /* ===== CARD GRID ===== */
+        .days-grid {
+            display: grid;
+            gap: 14px;
+            margin-bottom: 48px;
+        }
+
+        .day-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px 26px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            text-decoration: none;
+            color: var(--fg);
+            transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .day-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(79,195,247,0.1);
+            color: var(--fg);
+        }
+
+        .day-num {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--muted);
+            flex-shrink: 0;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+        .day-card:hover .day-num {
+            background: rgba(79,195,247,0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .day-info { flex: 1; min-width: 0; }
+        .day-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .day-desc {
+            font-size: 13px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .day-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0; }
+        .tag {
+            font-size: 11px;
+            background: rgba(79,195,247,0.1);
+            color: var(--accent);
+            border: 1px solid rgba(79,195,247,0.25);
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .arrow {
+            font-size: 18px;
+            color: var(--border);
+            flex-shrink: 0;
+            transition: color 0.2s, transform 0.2s;
+        }
+        .day-card:hover .arrow {
+            color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        /* ===== LANGUAGE DIVIDER ===== */
+        .lang-divider {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 8px 0;
+        }
+        .lang-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .lang-py { color: var(--yellow); }
+        .lang-cpp { color: var(--accent); }
+        .lang-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+        }
+        .ld-py { background: var(--yellow); }
+        .ld-cpp { background: var(--accent); }
+
+        /* ===== PATH CARD ===== */
+        .path-card {
+            background: linear-gradient(135deg, #161822, #1a1c2e);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 36px 40px;
+            text-align: center;
+        }
+        .path-card h2 {
+            font-size: 22px;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+        .path-card p {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .path-steps {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .path-step {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .ps-base {
+            background: rgba(255,212,59,0.1);
+            color: var(--yellow);
+            border: 1px solid rgba(255,212,59,0.25);
+        }
+        .ps-next {
+            background: var(--card);
+            color: var(--muted);
+            border: 1px solid var(--border);
+        }
+        .ps-arrow { color: var(--border); font-size: 15px; }
+
+        .path-card .target {
+            display: inline-block;
+            background: rgba(79,195,247,0.08);
+            border: 1px solid rgba(79,195,247,0.25);
+            color: var(--accent);
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 20px;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            text-align: center;
+            padding: 40px 24px 20px;
+            color: var(--muted);
+            font-size: 13px;
+            border-top: 1px solid var(--border);
+        }
+        .footer strong { color: var(--accent); }
+
+        /* ===== COMING SOON ===== */
+        .coming-soon {
+            opacity: 0.45;
+            cursor: default;
+        }
+        .coming-soon:hover {
+            transform: none !important;
+            box-shadow: none !important;
+            border-color: var(--border) !important;
+        }
+        .coming-soon .tag {
+            background: rgba(139,143,163,0.1);
+            color: var(--muted);
+            border-color: var(--border);
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+    <div class="badge">🚀 Python × C++</div>
+    <h1>每日<span class="py">Py</span> — Python 辅助 C++ 开发</h1>
+    <p>用 Python 提升 C++ 开发效率：自动化脚本 · 代码生成 · 数据处理 · 构建工具链</p>
+    <div class="meta">
+        <span>🕐 日更中</span>
+        <span>⚡ Python 基础</span>
+        <span>🔧 C++ 开发提效</span>
+    </div>
+</div>
+
+<!-- ===== CONTAINER ===== -->
+<div class="container">
+
+    <div class="section-label">📚 内容导航</div>
+    <div class="section-title">已发布章节</div>
+
+    <div class="days-grid">
+
+        <a class="day-card" href="Day01/day01_python_intro.html">
+            <div class="day-num">Day 01</div>
+            <div class="day-info">
+                <div class="day-title">Python 入门与 C++ 对比视角</div>
+                <div class="day-desc">变量 · 数据类型 · 语法差异 · Python 环境搭建</div>
+            </div>
+            <div class="day-tags">
+                <span class="tag">PYTHON</span>
+                <span class="tag">BASICS</span>
+            </div>
+            <div class="arrow">→</div>
+        </a>
+
+        <a class="day-card" href="Day02/day02_flow_control.html">
+            <div class="day-num">Day 02</div>
+            <div class="day-info">
+                <div class="day-title">流程控制</div>
+                <div class="day-desc">if/elif/else · for / while · 推导式 · 与 C++ 流程语句对比</div>
+            </div>
+            <div class="day-tags">
+                <span class="tag">FLOW</span>
+                <span class="tag">LOOPS</span>
+            </div>
+            <div class="arrow">→</div>
+        </a>
+
+        <a class="day-card" href="Day03/day03_file_exception.html">
+            <div class="day-num">Day 03</div>
+            <div class="day-info">
+                <div class="day-title">文件操作与异常处理</div>
+                <div class="day-desc">文件读写 · 路径处理 · try/except · 异常传播 · 与 C++ 文件流对比</div>
+            </div>
+            <div class="day-tags">
+                <span class="tag">FILE</span>
+                <span class="tag">EXCEPTION</span>
+            </div>
+            <div class="arrow">→</div>
+        </a>
+
+        <a class="day-card" href="Day04/day04_oop.html">
+            <div class="day-num">Day 04</div>
+            <div class="day-info">
+                <div class="day-title">面向对象编程</div>
+                <div class="day-desc">类与实例 · 继承 · 多态 · 装饰器 · 与 C++ OOP 异同对比</div>
+            </div>
+            <div class="day-tags">
+                <span class="tag">OOP</span>
+                <span class="tag">CLASS</span>
+            </div>
+            <div class="arrow">→</div>
+        </a>
+
+        <a class="day-card" href="Day05/day05_modules_packages_stdlib.html">
+            <div class="day-num">Day 05</div>
+            <div class="day-info">
+                <div class="day-title">模块、包与标准库</div>
+                <div class="day-desc">import / from · os / sys / pathlib · json / re · 打包分发 · C++ include 对比</div>
+            </div>
+            <div class="day-tags">
+                <span class="tag">MODULES</span>
+                <span class="tag">STDLIB</span>
+            </div>
+            <div class="arrow">→</div>
+        </a>
+
+    </div>
+
+    <!-- Coming Soon -->
+    <div class="days-grid">
+        <div class="day-card coming-soon" style="cursor:default;" onclick="return false;">
+            <div class="day-num">Day 06</div>
+            <div class="day-info">
+                <div class="day-title">Python 与 C++ 联合使用</div>
+                <div class="day-desc">ctypes · cffi · pybind11 · 性能边界 · 何时选 Python 何时选 C++</div>
+            </div>
+            <div class="day-tags">
+                <span class="tag">即将推出</span>
+            </div>
+            <div class="arrow" style="color:var(--border)">…</div>
+        </div>
+    </div>
+
+    <!-- 学习路径 -->
+    <div class="path-card">
+        <div class="lang-divider" style="justify-content:center; margin-bottom:12px;">
+            <div class="lang-item lang-py">
+                <div class="lang-dot ld-py"></div> Python
+            </div>
+            <span style="color:var(--muted);font-size:13px;">×</span>
+            <div class="lang-item lang-cpp">
+                <div class="lang-dot ld-cpp"></div> C++
+            </div>
+        </div>
+        <h2>🗺️ 学习目标</h2>
+        <p>用 Python 工具链赋能 C++ 项目开发，两种语言优势互补</p>
+        <div class="path-steps">
+            <div class="path-step ps-base">Python 基础（Day 01–05）</div>
+            <div class="path-step ps-arrow">→</div>
+            <div class="path-step ps-next">工具脚本实战（Day 06–10）</div>
+            <div class="path-step ps-arrow">→</div>
+            <div class="path-step ps-next">代码生成与自动化（Day 11–15）</div>
+            <div class="path-step ps-arrow">→</div>
+            <div class="path-step ps-next">构建与测试集成</div>
+        </div>
+        <div class="target">🔧 最终目标：用 Python 自动化 C++ 项目中的重复劳动，让 C++ 开发更高效</div>
+    </div>
+
+</div>
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+    <p>🚀 <strong>每日Py</strong> — Python 辅助 C++ 开发</p>
+    <p style="margin-top:6px;">已发布 Day 01–05 · 日更中 · 加油 🚀</p>
+</div>
+
+</body>
+</html>
