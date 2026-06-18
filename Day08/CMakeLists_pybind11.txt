@@ -1,0 +1,14 @@
+cmake_minimum_required(VERSION 3.15)
+project(pybind11_examples LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# 需要: pip install pybind11
+find_package(pybind11 REQUIRED)
+
+# 编译 example_ext 模块
+pybind11_add_module(example_ext pybind11_example.cpp)
+
+# 编译 numpy_ext 模块
+pybind11_add_module(numpy_ext pybind11_numpy.cpp)

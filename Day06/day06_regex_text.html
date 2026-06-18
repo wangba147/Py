@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 06: 正则表达式与文本处理</title>
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --bg2: #282a36;
+    --bg3: #313244;
+    --fg: #cdd6f4;
+    --fg2: #a6adc8;
+    --accent: #89b4fa;
+    --accent2: #f38ba8;
+    --accent3: #a6e3a1;
+    --accent4: #fab387;
+    --accent5: #cba6f7;
+    --code-bg: #181825;
+    --border: #45475a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 { color: var(--accent); font-size: 2rem; margin-bottom: 0.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+  h2 { color: var(--accent5); font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 0.8rem; border-left: 4px solid var(--accent5); padding-left: 0.8rem; }
+  h3 { color: var(--accent3); font-size: 1.2rem; margin-top: 1.8rem; margin-bottom: 0.5rem; }
+  .subtitle { color: var(--fg2); font-size: 1rem; margin-bottom: 2rem; }
+  p { margin: 0.8rem 0; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  .compare > div { background: var(--bg2); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .compare .label { padding: 0.4rem 0.8rem; font-weight: bold; font-size: 0.85rem; }
+  .compare .label.cpp { background: var(--accent2); color: #1e1e2e; }
+  .compare .label.py { background: var(--accent3); color: #1e1e2e; }
+  pre { background: var(--code-bg); border-radius: 6px; padding: 1rem; overflow-x: auto; margin: 0.5rem 0.8rem 0.8rem; font-size: 0.88rem; line-height: 1.6; border: 1px solid var(--border); }
+  code { font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; }
+  .inline { background: var(--bg3); padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; color: var(--accent); }
+  .tip { background: var(--bg2); border-left: 4px solid var(--accent4); padding: 1rem 1.2rem; margin: 1.2rem 0; border-radius: 0 8px 8px 0; }
+  .tip b { color: var(--accent4); }
+  .warn { background: var(--bg2); border-left: 4px solid var(--accent2); padding: 1rem 1.2rem; margin: 1.2rem 0; border-radius: 0 8px 8px 0; }
+  .warn b { color: var(--accent2); }
+  .practice { background: var(--bg2); border: 1px solid var(--accent); border-radius: 8px; padding: 1rem 1.2rem; margin: 1.5rem 0; }
+  .practice b { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+  th { background: var(--bg3); color: var(--accent); padding: 0.6rem; text-align: left; border: 1px solid var(--border); }
+  td { padding: 0.5rem 0.6rem; border: 1px solid var(--border); }
+  tr:hover td { background: var(--bg3); }
+  .kw { color: #cba6f7; }
+  .str { color: #a6e3a1; }
+  .cmt { color: #6c7086; font-style: italic; }
+  .fn { color: #89b4fa; }
+  .num { color: #fab387; }
+  .dec { color: #f38ba8; }
+  .op { color: #89dceb; }
+  .toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.5rem; margin: 1.5rem 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc ul { padding-left: 1.5rem; }
+  .toc li { margin: 0.3rem 0; }
+  .badge { display: inline-block; background: var(--accent); color: #1e1e2e; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: bold; vertical-align: middle; }
+  .badge.cpp-badge { background: var(--accent2); }
+  .badge.py-badge { background: var(--accent3); }
+  @media (max-width: 700px) {
+    .compare { grid-template-columns: 1fr; }
+    body { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Day 06: 正则表达式与文本处理</h1>
+<p class="subtitle">从 <code class="inline">std::regex</code> 的"难用"到 Python <code class="inline">re</code> 的"丝滑"——C++ 开发者最值得学的一课</p>
+
+<div class="toc">
+  <b>目录</b>
+  <ul>
+    <li><a href="#s1">1. 为什么 C++ 开发者要学 Python 正则</a></li>
+    <li><a href="#s2">2. re 模块基础：search / match / findall / sub</a></li>
+    <li><a href="#s3">3. 元字符与字符类速查表</a></li>
+    <li><a href="#s4">4. 分组捕获与命名分组</a></li>
+    <li><a href="#s5">5. 贪婪 vs 非贪婪</a></li>
+    <li><a href="#s6">6. 编译正则：re.compile 的性能优势</a></li>
+    <li><a href="#s7">7. 标志位：re.IGNORECASE / MULTILINE / DOTALL</a></li>
+    <li><a href="#s8">8. 字符串方法：split / strip / replace / join</a></li>
+    <li><a href="#s9">9. 实战一：解析 C++ 编译错误日志</a></li>
+    <li><a href="#s10">10. 实战二：从源码中提取 TODO/FIXME</a></li>
+    <li><a href="#s11">11. 实战三：批量重命名/格式化代码</a></li>
+  </ul>
+</div>
+
+<!-- ========== Section 1 ========== -->
+<h2 id="s1">1. 为什么 C++ 开发者要学 Python 正则</h2>
+
+<p>如果你是 C++ 程序员，你大概率对 <code class="inline">std::regex</code> 印象不好：API 难用、性能玄学、连个简单的分组都要写一堆代码。</p>
+
+<p>但日常 C++ 开发中，<b>文本处理</b>需求无处不在：</p>
+<ul style="margin-left: 2rem;">
+  <li>解析编译器的 <code class="inline">error: 'foo' was not declared in this scope</code> 错误日志</li>
+  <li>从成百上千个源文件里提取 <code class="inline">TODO</code> / <code class="inline">FIXME</code> 注释</li>
+  <li>批量重命名变量、函数、类（重构辅助）</li>
+  <li>解析 CMake 输出、JSON 配置文件、protobuf 生成代码</li>
+  <li>把 Windows 路径 <code class="inline">C:\foo\bar</code> 转成 Unix 风格</li>
+</ul>
+
+<p>这些活儿用 C++ 写一个能跑的版本可能要半天；用 Python 通常 <b>5~10 行</b>搞定。</p>
+
+<div class="compare">
+  <div>
+    <div class="label cpp">C++ — std::regex</div>
+<pre><span class="cmt">// 匹配 4 位数字年份（看着就累）</span>
+<span class="kw">std::regex</span> re(<span class="str">R"((\d{4}))"</span>);
+<span class="kw">std::string</span> s = <span class="str">"created in 2024"</span>;
+<span class="kw">std::smatch</span> m;
+<span class="kw">if</span> (<span class="fn">std::regex_search</span>(s, m, re)) {
+    <span class="kw">int</span> year = <span class="fn">std::stoi</span>(m[1].<span class="fn">str</span>());
+    <span class="fn">std::cout</span> &lt;&lt; year &lt;&lt; <span class="fn">std::endl</span>;
+}</pre>
+  </div>
+  <div>
+    <div class="label py">Python — re</div>
+<pre><span class="kw">import</span> re
+s = <span class="str">"created in 2024"</span>
+m = re.<span class="fn">search</span>(<span class="str">r'(\d{4})'</span>, s)
+<span class="kw">if</span> m:
+    year = <span class="fn">int</span>(m.<span class="fn">group</span>(<span class="num">1</span>))
+    <span class="fn">print</span>(year)   <span class="cmt"># 2024</span></pre>
+  </div>
+</div>
+
+<div class="tip">
+  <b>核心优势</b>：Python 的 <code class="inline">re</code> 模块是 C++ 生态里 <code class="inline">std::regex</code>、Boost.Regex、Qt QRegularExpression、ICU 之中<b>最容易上手、表达力最强</b>的方案。配合 <code class="inline">pathlib</code>、<code class="inline">subprocess</code>，能瞬间搭建一个文本处理工具链。
+</div>
+
+<!-- ========== Section 2 ========== -->
+<h2 id="s2">2. re 模块基础：search / match / findall / sub</h2>
+
+<p>Python 的 <code class="inline">re</code> 提供四个高频函数，覆盖 90% 的日常场景：</p>
+
+<table>
+  <tr><th>函数</th><th>作用</th><th>返回</th></tr>
+  <tr><td><code class="inline">re.search(pat, s)</code></td><td>在 s 中找<b>第一个</b>匹配</td><td>Match 对象 / None</td></tr>
+  <tr><td><code class="inline">re.match(pat, s)</code></td><td>只在 s 的<b>开头</b>匹配</td><td>Match 对象 / None</td></tr>
+  <tr><td><code class="inline">re.findall(pat, s)</code></td><td>返回<b>所有</b>匹配的列表</td><td>list[str] / list[tuple]</td></tr>
+  <tr><td><code class="inline">re.finditer(pat, s)</code></td><td>返回所有匹配的迭代器</td><td>迭代 Match 对象</td></tr>
+  <tr><td><code class="inline">re.sub(pat, repl, s)</code></td><td>替换</td><td>新字符串</td></tr>
+  <tr><td><code class="inline">re.split(pat, s)</code></td><td>按模式切分</td><td>list[str]</td></tr>
+</table>
+
+<pre><span class="kw">import</span> re
+
+s = <span class="str">"My phone: 138-1234-5678, office: 010-8765-4321"</span>
+
+<span class="cmt"># 1. search: 找第一个</span>
+m = re.<span class="fn">search</span>(<span class="str">r'\d{3}-\d{4}-\d{4}'</span>, s)
+<span class="fn">print</span>(m.<span class="fn">group</span>())          <span class="cmt"># 138-1234-5678</span>
+
+<span class="cmt"># 2. match: 必须在开头</span>
+m2 = re.<span class="fn">match</span>(<span class="str">r'My'</span>, s)
+<span class="fn">print</span>(m2.<span class="fn">group</span>())         <span class="cmt"># My  (如果改成 Phone 就匹配不到)</span>
+
+<span class="cmt"># 3. findall: 全部提取</span>
+phones = re.<span class="fn">findall</span>(<span class="str">r'\d{3}-\d{4}-\d{4}'</span>, s)
+<span class="fn">print</span>(phones)                <span class="cmt"># ['138-1234-5678', '010-8765-4321']</span>
+
+<span class="cmt"># 4. sub: 替换</span>
+masked = re.<span class="fn">sub</span>(<span class="str">r'\d{4}'</span>, <span class="str">'****'</span>, s)
+<span class="fn">print</span>(masked)                <span class="cmt"># My phone: 138-****-****, ...</span></pre>
+
+<div class="warn">
+  <b>search vs match 易混淆点</b>：<code class="inline">match</code> 只检查字符串<b>开头</b>，不匹配会返回 None；想找<b>任意位置</b>用 <code class="inline">search</code>；想匹配<b>整个字符串</b>用 <code class="inline">fullmatch</code>。
+</div>
+
+<!-- ========== Section 3 ========== -->
+<h2 id="s3">3. 元字符与字符类速查表</h2>
+
+<p>正则的"语法糖"很少，但每一种都值得记住。下面这张表是 C++ 开发者最常查的：</p>
+
+<table>
+  <tr><th>类别</th><th>语法</th><th>含义</th><th>C++ 里的等价</th></tr>
+  <tr><td rowspan="6">字符类</td><td><code class="inline">.</code></td><td>任意单字符（除换行）</td><td>无直接对应</td></tr>
+  <tr><td><code class="inline">\d</code> / <code class="inline">\D</code></td><td>数字 / 非数字</td><td><code class="inline">std::isdigit</code></td></tr>
+  <tr><td><code class="inline">\w</code> / <code class="inline">\W</code></td><td>单词字符 [A-Za-z0-9_] / 非</td><td>标识符判断</td></tr>
+  <tr><td><code class="inline">\s</code> / <code class="inline">\S</code></td><td>空白（空格/制表/换行）</td><td><code class="inline">std::isspace</code></td></tr>
+  <tr><td><code class="inline">[abc]</code></td><td>a 或 b 或 c</td><td>字符集合</td></tr>
+  <tr><td><code class="inline">[^abc]</code></td><td>非 a/b/c</td><td>取反</td></tr>
+  <tr><td rowspan="6">量词</td><td><code class="inline">*</code></td><td>0 或多个</td><td><code class="inline">{0,}</code></td></tr>
+  <tr><td><code class="inline">+</code></td><td>1 或多个</td><td><code class="inline">{1,}</code></td></tr>
+  <tr><td><code class="inline">?</code></td><td>0 或 1 个</td><td><code class="inline">{0,1}</code></td></tr>
+  <tr><td><code class="inline">{n}</code></td><td>恰好 n 个</td><td>循环</td></tr>
+  <tr><td><code class="inline">{n,}</code></td><td>至少 n 个</td><td>—</td></tr>
+  <tr><td><code class="inline">{n,m}</code></td><td>n 到 m 个</td><td>—</td></tr>
+  <tr><td rowspan="4">锚点</td><td><code class="inline">^</code></td><td>行/字符串开头</td><td>—</td></tr>
+  <tr><td><code class="inline">$</code></td><td>行/字符串结尾</td><td>—</td></tr>
+  <tr><td><code class="inline">\b</code></td><td>单词边界</td><td>—</td></tr>
+  <tr><td><code class="inline">\B</code></td><td>非单词边界</td><td>—</td></tr>
+  <tr><td rowspan="3">转义</td><td><code class="inline">\(</code></td><td>匹配左括号</td><td>—</td></tr>
+  <tr><td><code class="inline">\\</code></td><td>匹配反斜杠</td><td>—</td></tr>
+  <tr><td><code class="inline">\.</code></td><td>匹配点号</td><td>—</td></tr>
+</table>
+
+<div class="tip">
+  <b>Python 原始字符串 r"..."</b>：写正则强烈建议用 <code class="inline">r'...'</code> 前缀，避免 <code class="inline">\d</code> 被 Python 字符串解析成退格符。<code class="inline">r'\d'</code> 就是两个字符 <code class="inline">\d</code>，<code class="inline">'\d'</code> 才是 <code class="inline">\\d</code>（反斜杠+d）。
+</div>
+
+<pre><span class="cmt"># 错误：'\\d' 实际上是 '\\d'，匹配反斜杠后跟 d</span>
+re.<span class="fn">search</span>(<span class="str">'\d{4}'</span>, <span class="str">'2024'</span>)   <span class="cmt"># ❌ 匹配不到</span>
+
+<span class="cmt"># 正确：r 前缀保留原始字符</span>
+re.<span class="fn">search</span>(<span class="str">r'\d{4}'</span>, <span class="str">'2024'</span>)  <span class="cmt"># ✅ 2024</span></pre>
+
+<!-- ========== Section 4 ========== -->
+<h2 id="s4">4. 分组捕获与命名分组</h2>
+
+<p>用 <code class="inline">( )</code> 括起来的部分会被"捕获"——这在解析复杂文本时至关重要。</p>
+
+<h3>4.1 匿名分组</h3>
+<pre><span class="cmt"># 解析日期 YYYY-MM-DD</span>
+date = <span class="str">"2024-03-15"</span>
+m = re.<span class="fn">search</span>(<span class="str">r'(\d{4})-(\d{2})-(\d{2})'</span>, date)
+<span class="kw">if</span> m:
+    year, month, day = m.<span class="fn">group</span>(<span class="num">1</span>), m.<span class="fn">group</span>(<span class="num">2</span>), m.<span class="fn">group</span>(<span class="num">3</span>)
+    <span class="fn">print</span>(<span class="str">f"{year}/{month}/{day}"</span>)   <span class="cmt"># 2024/03/15</span>
+
+<span class="cmt"># group(0) 是整个匹配</span>
+<span class="fn">print</span>(m.<span class="fn">group</span>(<span class="num">0</span>))   <span class="cmt"># 2024-03-15</span></pre>
+
+<h3>4.2 命名分组 — 强烈推荐</h3>
+<p>用 <code class="inline">(?P&lt;name&gt;...)</code> 给分组起名字，可读性大幅提升，也方便后期维护。</p>
+
+<div class="compare">
+  <div>
+    <div class="label cpp">C++ — 难用</div>
+<pre><span class="cmt">// std::regex 不支持命名分组</span>
+<span class="cmt">// 只能靠索引硬记 m[1], m[2]...</span>
+<span class="kw">std::regex</span> re(<span class="str">R"((\d{4})-(\d{2})-(\d{2}))"</span>);
+<span class="cmt">// 谁是月？谁是日？靠注释</span></pre>
+  </div>
+  <div>
+    <div class="label py">Python — 优雅</div>
+<pre>m = re.<span class="fn">search</span>(
+    <span class="str">r'(?P&lt;year&gt;\d{4})-(?P&lt;month&gt;\d{2})-(?P&lt;day&gt;\d{2})'</span>,
+    <span class="str">"2024-03-15"</span>
+)
+<span class="fn">print</span>(m.<span class="fn">group</span>(<span class="str">'year'</span>))    <span class="cmt"># 2024</span></pre>
+  </div>
+</div>
+
+<h3>4.3 反向引用（高级）</h3>
+<p>命名/匿名分组还可以在<b>同一个正则内部</b>用 <code class="inline">\1</code> 或 <code class="inline">(?P=name)</code> 复用——常用于匹配重复模式（如 HTML 标签、引号配对）。</p>
+
+<pre><span class="cmt"># 匹配成对的双引号字符串</span>
+re.<span class="fn">findall</span>(<span class="str">r'"([^"]*)"'</span>, <span class="str">'"hello", "world"'</span>)
+<span class="cmt"># ['hello', 'world']</span>
+
+<span class="cmt"># 匹配对称的 HTML 标签（开放 = 关闭）</span>
+re.<span class="fn">search</span>(<span class="str">r'&lt;(?P&lt;tag&gt;\w+)&gt;.*?&lt;/(?P=tag)&gt;'</span>,
+         <span class="str">"&lt;div&gt;hello&lt;/div&gt;"</span>)   <span class="cmt"># ✅ 匹配</span>
+re.<span class="fn">search</span>(<span class="str">r'&lt;(?P&lt;tag&gt;\w+)&gt;.*?&lt;/(?P=tag)&gt;'</span>,
+         <span class="str">"&lt;div&gt;hello&lt;/span&gt;"</span>)  <span class="cmt"># ❌ 不匹配</span></pre>
+
+<!-- ========== Section 5 ========== -->
+<h2 id="s5">5. 贪婪 vs 非贪婪</h2>
+
+<p>Python 的量词默认是<b>贪婪</b>（greedy）的——会尽量匹配<b>最长</b>的字符串。加上 <code class="inline">?</code> 后变成<b>非贪婪</b>（lazy）——匹配<b>最短</b>。</p>
+
+<div class="compare">
+  <div>
+    <div class="label cpp">C++ 默认行为</div>
+<pre><span class="cmt">// std::regex 也是贪婪</span>
+<span class="cmt">// 但语法 .*? 同样支持</span></pre>
+  </div>
+  <div>
+    <div class="label py">Python 示例</div>
+<pre>html = <span class="str">"&lt;b&gt;foo&lt;/b&gt;&lt;b&gt;bar&lt;/b&gt;"</span>
+
+<span class="cmt"># 贪婪：.* 匹配到最远</span>
+re.<span class="fn">findall</span>(<span class="str">r'&lt;b&gt;.*&lt;/b&gt;'</span>, html)
+<span class="cmt"># ['&lt;b&gt;foo&lt;/b&gt;&lt;b&gt;bar&lt;/b&gt;']</span>
+
+<span class="cmt"># 非贪婪：.*? 尽快停下</span>
+re.<span class="fn">findall</span>(<span class="str">r'&lt;b&gt;.*?&lt;/b&gt;'</span>, html)
+<span class="cmt"># ['&lt;b&gt;foo&lt;/b&gt;', '&lt;b&gt;bar&lt;/b&gt;']</span></pre>
+  </div>
+</div>
+
+<div class="tip">
+  <b>经验法则</b>：解析 HTML/XML 这类<b>嵌套</b>结构时，几乎一定要用非贪婪。解析日志、CSV 这种<b>行式</b>数据时，贪婪更省事。
+</div>
+
+<!-- ========== Section 6 ========== -->
+<h2 id="s6">6. 编译正则：re.compile 的性能优势</h2>
+
+<p>在循环里反复用同一个正则时，<b>一定要先编译</b>——这是把 Python 文本处理从"能跑"提升到"快跑"的关键。</p>
+
+<div class="compare">
+  <div>
+    <div class="label cpp">C++ std::regex</div>
+<pre><span class="cmt">// C++ 思路：把 regex 对象放循环外</span>
+<span class="kw">std::regex</span> re(<span class="str">R"(\d+)"</span>);
+<span class="kw">for</span> (<span class="kw">auto</span>&amp; line : lines) {
+    <span class="kw">std::smatch</span> m;
+    <span class="fn">std::regex_search</span>(line, m, re);
+}</pre>
+  </div>
+  <div>
+    <div class="label py">Python re.compile</div>
+<pre>pattern = re.<span class="fn">compile</span>(<span class="str">r'\d+'</span>)
+<span class="kw">for</span> line <span class="kw">in</span> lines:
+    m = pattern.<span class="fn">search</span>(line)
+    <span class="cmt"># 比 re.search(r'\d+', line) 快 5~10 倍</span></pre>
+  </div>
+</div>
+
+<h3>编译对象的所有方法</h3>
+<pre><span class="kw">import</span> re
+
+p = re.<span class="fn">compile</span>(<span class="str">r'\d+'</span>)
+p.<span class="fn">search</span>(s)         <span class="cmt"># 等价 re.search</span>
+p.<span class="fn">match</span>(s)          <span class="cmt"># 等价 re.match</span>
+p.<span class="fn">findall</span>(s)        <span class="cmt"># 等价 re.findall</span>
+p.<span class="fn">finditer</span>(s)       <span class="cmt"># 等价 re.finditer</span>
+p.<span class="fn">sub</span>(repl, s)      <span class="cmt"># 等价 re.sub</span>
+p.<span class="fn">pattern</span>            <span class="cmt"># 原字符串 '\d+'</span>
+p.<span class="fn">flags</span>              <span class="cmt"># 编译时设置的标志位</span></pre>
+
+<!-- ========== Section 7 ========== -->
+<h2 id="s7">7. 标志位：re.IGNORECASE / MULTILINE / DOTALL</h2>
+
+<table>
+  <tr><th>标志</th><th>简写</th><th>作用</th></tr>
+  <tr><td><code class="inline">re.IGNORECASE</code></td><td><code class="inline">re.I</code></td><td>忽略大小写</td></tr>
+  <tr><td><code class="inline">re.MULTILINE</code></td><td><code class="inline">re.M</code></td><td>^ $ 匹配每行的开头/结尾</td></tr>
+  <tr><td><code class="inline">re.DOTALL</code></td><td><code class="inline">re.S</code></td><td>. 也匹配换行符</td></tr>
+  <tr><td><code class="inline">re.ASCII</code></td><td><code class="inline">re.A</code></td><td>\w \d \s 仅匹配 ASCII</td></tr>
+  <tr><td><code class="inline">re.VERBOSE</code></td><td><code class="inline">re.X</code></td><td>允许多行 + 注释（强烈推荐用于复杂正则）</td></tr>
+</table>
+
+<h3>re.VERBOSE：写出可读的正则</h3>
+<pre>phone_re = re.<span class="fn">compile</span>(<span class="str">r'''
+    ^                          <span class="cmt"># 开头</span>
+    (?P&lt;area&gt;\d{3})            <span class="cmt"># 区号 3 位</span>
+    -                          <span class="cmt"># 分隔符</span>
+    (?P&lt;num&gt;\d{4})             <span class="cmt"># 前 4 位</span>
+    -                          <span class="cmt"># 分隔符</span>
+    (?P&lt;end&gt;\d{4})             <span class="cmt"># 后 4 位</span>
+    $                          <span class="cmt"># 结尾</span>
+'''</span>, re.VERBOSE)
+
+m = phone_re.<span class="fn">search</span>(<span class="str">"138-1234-5678"</span>)
+<span class="fn">print</span>(m.<span class="fn">groupdict</span>())
+<span class="cmt"># {'area': '138', 'num': '1234', 'end': '5678'}</span></pre>
+
+<div class="tip">
+  <b>组合标志</b>：<code class="inline">re.compile(pat, re.I | re.M)</code>。位运算 <code class="inline">|</code> 是 Python 标志位的标准用法，区别于 C++ 的 <code class="inline">std::regex::icase</code> 等枚举。
+</div>
+
+<!-- ========== Section 8 ========== -->
+<h2 id="s8">8. 字符串方法：split / strip / replace / join</h2>
+
+<p>不是所有文本处理都要正则。Python 的字符串自带了一组"瑞士军刀"：</p>
+
+<table>
+  <tr><th>方法</th><th>作用</th><th>示例</th></tr>
+  <tr><td><code class="inline">s.split(sep)</code></td><td>切分</td><td><code class="inline">"a,b,c".split(",")</code> → <code class="inline">['a','b','c']</code></td></tr>
+  <tr><td><code class="inline">s.strip()</code></td><td>去两端空白</td><td><code class="inline">"  hi\n".strip()</code> → <code class="inline">"hi"</code></td></tr>
+  <tr><td><code class="inline">s.lstrip() / rstrip()</code></td><td>去左/右空白</td><td>—</td></tr>
+  <tr><td><code class="inline">s.replace(old, new)</code></td><td>替换</td><td><code class="inline">"a-b".replace("-", "_")</code></td></tr>
+  <tr><td><code class="inline">sep.join(list)</code></td><td>拼接</td><td><code class="inline">",".join(['a','b'])</code> → <code class="inline">"a,b"</code></td></tr>
+  <tr><td><code class="inline">s.startswith(p)</code></td><td>前缀判断</td><td><code class="inline">"CMake".startswith("CM")</code></td></tr>
+  <tr><td><code class="inline">s.endswith(p)</code></td><td>后缀判断</td><td><code class="inline">"main.cpp".endswith(".cpp")</code></td></tr>
+  <tr><td><code class="inline">s.upper() / lower()</code></td><td>大小写</td><td>—</td></tr>
+  <tr><td><code class="inline">s.find(sub)</code></td><td>找子串位置</td><td>—</td></tr>
+</table>
+
+<div class="compare">
+  <div>
+    <div class="label cpp">C++ 字符串处理</div>
+<pre><span class="cmt">// 找子串 + 切分要写一堆代码</span>
+<span class="kw">auto</span> pos = s.<span class="fn">find</span>(<span class="str">","</span>);
+<span class="kw">auto</span> first = s.<span class="fn">substr</span>(<span class="num">0</span>, pos);
+<span class="kw">auto</span> rest  = s.<span class="fn">substr</span>(pos + <span class="num">1</span>);
+
+<span class="cmt">// split 没有标准库，要么手写循环</span>
+<span class="cmt">// 要么用 boost::split、absl::StrSplit</span></pre>
+  </div>
+  <div>
+    <div class="label py">Python 一行解决</div>
+<pre>first, rest = s.<span class="fn">split</span>(<span class="str">","</span>, <span class="num">1</span>)
+parts = s.<span class="fn">split</span>(<span class="str">","</span>)   <span class="cmt"># 全部切分</span>
+clean = s.<span class="fn">strip</span>()
+upper = s.<span class="fn">upper</span>()</pre>
+  </div>
+</div>
+
+<div class="tip">
+  <b>何时用正则、何时用字符串方法</b>：能用 <code class="inline">str.split/str.replace/str.startswith</code> 解决的就别用正则——可读性、性能、可维护性都更好。只在"模糊匹配"或"复杂模式"时才上 <code class="inline">re</code>。
+</div>
+
+<!-- ========== Section 9 ========== -->
+<h2 id="s9">9. 实战一：解析 C++ 编译错误日志</h2>
+
+<p>在 CI（GitHub Actions / Jenkins）里跑构建时，常常需要把编译器的错误提取出来，汇总成报告。下面是 GCC 风格错误的解析：</p>
+
+<pre><span class="cmt"># 模拟一段 GCC 错误输出</span>
+log = <span class="str">"""
+main.cpp: In function 'int main()':
+main.cpp:12:5: error: 'foo' was not declared in this scope
+   12 |     foo();
+      |     ^~~
+main.cpp:15:9: warning: unused variable 'x' [-Wunused-variable]
+   15 |     int x = 42;
+      |         ^
+utils.cpp:42:1: error: expected '}' at end of input
+   42 |
+      | ^
+"""</span>
+
+<span class="cmt"># 模式: 文件:行:列: 严重等级: 消息</span>
+pattern = re.<span class="fn">compile</span>(
+    <span class="str">r'^(?P&lt;file&gt;[\w./\\-]+):(?P&lt;line&gt;\d+):(?P&lt;col&gt;\d+):\s*'</span>
+    <span class="str">r'(?P&lt;severity&gt;error|warning|note):\s*(?P&lt;msg&gt;.*)$'</span>,
+    re.MULTILINE
+)
+
+issues = []
+<span class="kw">for</span> m <span class="kw">in</span> pattern.<span class="fn">finditer</span>(log):
+    issues.<span class="fn">append</span>(m.<span class="fn">groupdict</span>())
+
+<span class="kw">for</span> i <span class="kw">in</span> issues:
+    <span class="fn">print</span>(<span class="str">f"[{i['severity'].upper():7}] {i['file']}:{i['line']}: {i['msg']}"</span>)
+
+<span class="cmt"># 输出:</span>
+<span class="cmt"># [ERROR  ] main.cpp:12: 'foo' was not declared in this scope</span>
+<span class="cmt"># [WARNING] main.cpp:15: unused variable 'x' [-Wunused-variable]</span>
+<span class="cmt"># [ERROR  ] utils.cpp:42: expected '}' at end of input</span></pre>
+
+<div class="practice">
+  <b>练习</b>：改写上面的代码，把结果按"文件"分组，统计每个文件有多少个 error / warning，并按 error 数倒序排序（提示：<code class="inline">collections.Counter</code> + <code class="inline">sorted</code>）。
+</div>
+
+<!-- ========== Section 10 ========== -->
+<h2 id="s10">10. 实战二：从源码中提取 TODO/FIXME</h2>
+
+<p>代码审查时经常需要找：</p>
+<ul style="margin-left: 2rem;">
+  <li><code class="inline">TODO</code> — 待办</li>
+  <li><code class="inline">FIXME</code> — 需要修复</li>
+  <li><code class="inline">XXX</code> — 危险</li>
+  <li><code class="inline">HACK</code> — 临时方案</li>
+  <li><code class="inline">NOTE</code> — 提醒</li>
+</ul>
+
+<pre><span class="kw">from</span> pathlib <span class="kw">import</span> Path
+<span class="kw">import</span> re
+
+<span class="cmt"># 匹配: // TODO(username): 2024-03-15: message</span>
+<span class="cmt"># 或:   /* FIXME: ... */</span>
+todo_re = re.<span class="fn">compile</span>(<span class="str">r'''
+    (?P&lt;tag&gt;TODO|FIXME|XXX|HACK|NOTE)         <span class="cmt"># 标签</span>
+    (?:\((?P&lt;owner&gt;[\w]+)\))?                <span class="cmt"># 可选负责人</span>
+    (?::\s*(?P&lt;date&gt;\d{4}-\d{2}-\d{2}))?      <span class="cmt"># 可选日期</span>
+    \s*:\s*                                  <span class="cmt"># 分隔</span>
+    (?P&lt;msg&gt;.*?)                              <span class="cmt"># 消息（非贪婪）</span>
+    \s*(?:\*/|$)                             <span class="cmt">// 结尾</span>
+'''</span>, re.VERBOSE | re.IGNORECASE)
+
+<span class="kw">def</span> <span class="fn">scan_todos</span>(root: Path):
+    items = []
+    <span class="kw">for</span> cpp_file <span class="kw">in</span> root.<span class="fn">rglob</span>(<span class="str">"*.cpp"</span>):
+        <span class="kw">try</span>:
+            text = cpp_file.<span class="fn">read_text</span>(encoding=<span class="str">'utf-8'</span>)
+        <span class="kw">except</span> UnicodeDecodeError:
+            <span class="kw">continue</span>
+        <span class="kw">for</span> i, line <span class="kw">in</span> <span class="fn">enumerate</span>(text.<span class="fn">splitlines</span>(), <span class="num">1</span>):
+            <span class="kw">for</span> m <span class="kw">in</span> todo_re.<span class="fn">finditer</span>(line):
+                items.<span class="fn">append</span>({
+                    <span class="str">'file'</span>: <span class="fn">str</span>(cpp_file),
+                    <span class="str">'line'</span>: i,
+                    **m.<span class="fn">groupdict</span>()
+                })
+    <span class="kw">return</span> items
+
+<span class="cmt"># 使用</span>
+todos = <span class="fn">scan_todos</span>(Path(<span class="str">"./src"</span>))
+<span class="kw">for</span> t <span class="kw">in</span> todos:
+    owner = t[<span class="str">'owner'</span>] <span class="kw">or</span> <span class="str">"unassigned"</span>
+    <span class="fn">print</span>(<span class="str">f"{t['file']}:{t['line']:3} {t['tag']:6} ({owner}) {t['msg']}"</span>)</pre>
+
+<!-- ========== Section 11 ========== -->
+<h2 id="s11">11. 实战三：批量重命名/格式化代码</h2>
+
+<p>重构 C++ 项目时，批量替换类名、函数名是常态。下面是一个"安全替换"工具——只替换<b>完整单词</b>，避免误伤 <code class="inline">MyClass</code> 里的 <code class="inline">Class</code>：</p>
+
+<pre><span class="kw">from</span> pathlib <span class="kw">import</span> Path
+<span class="kw">import</span> re
+
+<span class="kw">def</span> <span class="fn">safe_replace</span>(
+    root: Path,
+    old: str,
+    new: str,
+    extensions=<span class="str">".cpp .hpp .h .cc"</span>.<span class="fn">split</span>()
+):
+    <span class="str">"""
+    把文件中所有完整单词 old 替换为 new。
+    \b 是单词边界，避免误伤子串。
+    """</span>
+    pattern = re.<span class="fn">compile</span>(<span class="str">rf'\b{re.escape(old)}\b'</span>)
+
+    stats = {<span class="str">'scanned'</span>: <span class="num">0</span>, <span class="str">'modified'</span>: <span class="num">0</span>, <span class="str">'replacements'</span>: <span class="num">0</span>}
+
+    <span class="kw">for</span> ext <span class="kw">in</span> extensions:
+        <span class="kw">for</span> f <span class="kw">in</span> root.<span class="fn">rglob</span>(<span class="str">f"*{ext}"</span>):
+            stats[<span class="str">'scanned'</span>] += <span class="num">1</span>
+            text = f.<span class="fn">read_text</span>(encoding=<span class="str">'utf-8'</span>)
+            new_text, n = pattern.<span class="fn">subn</span>(new, text)
+            <span class="kw">if</span> n > <span class="num">0</span>:
+                f.<span class="fn">write_text</span>(new_text, encoding=<span class="str">'utf-8'</span>)
+                stats[<span class="str">'modified'</span>] += <span class="num">1</span>
+                stats[<span class="str">'replacements'</span>] += n
+                <span class="fn">print</span>(<span class="str">f"  {f}: {n} 处替换"</span>)
+
+    <span class="kw">return</span> stats
+
+<span class="cmt"># 使用</span>
+result = <span class="fn">safe_replace</span>(
+    Path(<span class="str">"./src"</span>),
+    old=<span class="str">"OldName"</span>,
+    new=<span class="str">"NewName"</span>
+)
+<span class="fn">print</span>(<span class="str">f"\n扫描 {result['scanned']} 文件，修改 {result['modified']} 个，"</span>
+      <span class="str">f"共 {result['replacements']} 处替换。"</span>)</pre>
+
+<div class="warn">
+  <b>小心正则特殊字符</b>：<code class="inline">old</code> 是用户输入时，<b>必须</b>用 <code class="inline">re.escape(old)</code> 转义，否则 <code class="inline">old = "A.B"</code> 会变成"匹配任意字符"。<code class="inline">\b...\b</code> 是单词边界，避免 <code class="inline">foo</code> 替换 <code class="inline">foobar</code>。
+</div>
+
+<!-- ========== 结尾 ========== -->
+<div class="practice">
+  <b>本节练习</b>
+  <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
+    <li>写一个正则，从 <code class="inline">#include &lt;...&gt;</code> 和 <code class="inline">#include "..."</code> 中提取所有头文件路径。</li>
+    <li>把一个 C++ 源文件中的所有 <code class="inline">// ...</code> 单行注释和 <code class="inline">/* ... */</code> 多行注释替换为 <code class="inline">/* ... */</code> 形式（提示：用 <code class="inline">re.sub</code> + 回调函数）。</li>
+    <li>写一个脚本扫描当前目录所有 <code class="inline">.cpp/.h</code>，统计函数定义的<b>总行数</b>（正则匹配 <code class="inline">^\w+(\s+\w+)*\s*\([^;]*\)\s*\{?$</code>）。</li>
+  </ol>
+</div>
+
+<p style="margin-top: 2rem; color: var(--fg2); font-size: 0.9rem;">
+  下一节 <a href="#" style="color: var(--accent);">Day 07: subprocess 与系统调用</a>，我们将用 Python <b>调用</b>编译好的 C++ 程序，搭一个完整的"Python 指挥 C++"工作流。
+</p>
+
+</body>
+</html>

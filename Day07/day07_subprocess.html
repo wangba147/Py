@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 07: subprocess 与系统调用 —— Python 调用 C++ 程序</title>
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --bg2: #282a36;
+    --bg3: #313244;
+    --fg: #cdd6f4;
+    --fg2: #a6adc8;
+    --accent: #89b4fa;
+    --accent2: #f38ba8;
+    --accent3: #a6e3a1;
+    --accent4: #fab387;
+    --accent5: #cba6f7;
+    --code-bg: #181825;
+    --border: #45475a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 {
+    color: var(--accent);
+    font-size: 2rem;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  h2 {
+    color: var(--accent3);
+    font-size: 1.5rem;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid var(--accent3);
+    padding-left: 0.8rem;
+  }
+  h3 {
+    color: var(--accent4);
+    font-size: 1.2rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.6rem;
+  }
+  h4 {
+    color: var(--accent5);
+    font-size: 1.05rem;
+    margin-top: 1rem;
+    margin-bottom: 0.4rem;
+  }
+  p, li { color: var(--fg); }
+  ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+  li { margin-bottom: 0.3rem; }
+  code {
+    background: var(--code-bg);
+    color: var(--accent3);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.95em;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 0.8rem 0 1.2rem;
+  }
+  pre code {
+    background: transparent;
+    color: var(--fg);
+    padding: 0;
+    border-radius: 0;
+    line-height: 1.55;
+  }
+  .lang-cpp   .k { color: #cba6f7; }   /* keyword */
+  .lang-cpp   .s { color: #a6e3a1; }   /* string */
+  .lang-cpp   .c { color: #6c7086; font-style: italic; } /* comment */
+  .lang-cpp   .n { color: #fab387; }   /* number */
+  .lang-cpp   .t { color: #89b4fa; }   /* type */
+  .lang-py    .k { color: #cba6f7; }
+  .lang-py    .s { color: #a6e3a1; }
+  .lang-py    .c { color: #6c7086; font-style: italic; }
+  .lang-py    .n { color: #fab387; }
+  .lang-py    .b { color: #f38ba8; }   /* builtin */
+  .lang-shell .c { color: #6c7086; font-style: italic; }
+  .lang-shell .s { color: #a6e3a1; }
+  .tip {
+    background: var(--bg3);
+    border-left: 4px solid var(--accent4);
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+  }
+  .warn {
+    background: var(--bg3);
+    border-left: 4px solid var(--accent2);
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+  }
+  .info {
+    background: var(--bg3);
+    border-left: 4px solid var(--accent);
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    background: var(--bg2);
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.8rem;
+    text-align: left;
+  }
+  th { background: var(--bg3); color: var(--accent); }
+  .toc {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .toc ul { list-style: none; margin-left: 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .badge {
+    display: inline-block;
+    background: var(--accent5);
+    color: var(--bg);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-right: 0.3rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>Day 07: subprocess 与系统调用 —— Python 调用 C++ 程序</h1>
+
+<div class="toc">
+  <h3 style="margin-top:0">目录</h3>
+  <ul>
+    <li><a href="#why">为什么 C++ 开发者要学 subprocess</a></li>
+    <li><a href="#three-ways">三种启动子进程的方式</a></li>
+    <li><a href="#run-args">subprocess.run 的核心参数</a></li>
+    <li><a href="#capture">捕获 stdout / stderr / 退出码</a></li>
+    <li><a href="#popen">Popen 实时流式输出</a></li>
+    <li><a href="#stdin">通过 stdin 喂数据给子进程</a></li>
+    <li><a href="#cpp-flow">实战: 编译并运行 C++ 程序</a></li>
+    <li><a href="#log">实战: 把构建日志写到文件</a></li>
+    <li><a href="#shlex">shlex 与跨平台命令解析</a></li>
+    <li><a href="#safety">安全与常见坑</a></li>
+    <li><a href="#tool">实战工具: cpp_build_runner.py</a></li>
+    <li><a href="#summary">小结与练习</a></li>
+  </ul>
+</div>
+
+<div class="info">
+  <strong>今日目标</strong>: 学会用 Python 启动并控制外部进程, 特别是用来编译和运行你写的 C++ 程序。
+  这是把 Python 当"自动化胶水"的关键一步 —— <code>subprocess</code> 之于 Python, 就像
+  <code>system()</code> / <code>popen()</code> 之于 C, 但好用十倍。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="why">1. 为什么 C++ 开发者要学 subprocess</h2>
+
+<p>在 C++ 项目里, 我们经常需要写一些"外围脚本":</p>
+<ul>
+  <li>提交前跑一遍 <code>clang-format</code> + <code>clang-tidy</code></li>
+  <li>触发 <code>cmake --build</code> 并把警告统计出来</li>
+  <li>跑单元测试 <code>./unit_test --gtest_filter=...</code> 并解析输出</li>
+  <li>从 git 拉数据, 调用 <code>protoc</code> 重新生成代码</li>
+</ul>
+
+<p>这些事过去用 <code>bash</code> / <code>.bat</code> + <code>system()</code> 拼起来也能做, 但
+Windows 和 Linux 语法差异巨大, 跨平台非常痛苦。Python 的 <code>subprocess</code> 模块
+给你一套<strong>统一、跨平台、可控</strong>的 API, 几乎可以替换所有 shell 脚本。</p>
+
+<!-- ============================================================ -->
+<h2 id="three-ways">2. 三种启动子进程的方式</h2>
+
+<h3>2.1 os.system —— 最朴素</h3>
+<p>C++ 里的 <code>system(const char*)</code> 大家都熟, Python 的 <code>os.system</code> 几乎一模一样:
+只负责"启动 + 等结束", 拿不到 stdout, 只能拿到一个粗粒度的退出码。</p>
+
+<pre><code class="lang-cpp">// C++ 视角
+#include &lt;cstdlib&gt;
+int rc = std::system("g++ main.cpp -o main");   // 只能拿到 rc
+std::cout &lt;&lt; "rc = " &lt;&lt; rc &lt;&lt; std::endl;</code></pre>
+
+<pre><code class="lang-py"><span class="c"># Python 视角</span>
+<span class="k">import</span> os
+rc = os.system(<span class="s">"g++ main.cpp -o main"</span>)
+<span class="b">print</span>(<span class="s">f"rc = </span>{rc}<span class="s">"</span>)</code></pre>
+
+<div class="tip">
+  <strong>经验</strong>: <code>os.system</code> 在 Windows 上返回 0/1, 在 Linux 上是 shell
+  退出码左移 8 位 —— 跨平台代码不要依赖具体数值, 最好只判断 <code>== 0</code>。
+</div>
+
+<h3>2.2 os.popen —— 能读 stdout, 但只能读</h3>
+<p>对应 C 里的 <code>popen("cmd", "r")</code> + <code>fread</code>。用起来像打开文件一样:</p>
+
+<pre><code class="lang-py"><span class="c"># 类似 C++ 的:  FILE* fp = popen("g++ --version", "r"); char buf[256]; fread(...);</span>
+<span class="k">import</span> os
+<span class="k">with</span> os.popen(<span class="s">"g++ --version"</span>) <span class="k">as</span> fp:
+    output = fp.read()           <span class="c"># 一次性读完整个 stdout</span>
+<span class="b">print</span>(output)</code></pre>
+
+<h3>2.3 subprocess.run —— 现代推荐</h3>
+<p>一次性解决"启动 + 等待 + 捕获输出 + 拿到退出码 + 异常处理"。99% 的场景用它就够了。</p>
+
+<pre><code class="lang-py"><span class="k">import</span> subprocess
+r = subprocess.run([<span class="s">"g++"</span>, <span class="s">"--version"</span>], capture_output=<span class="b">True</span>, text=<span class="b">True</span>)
+<span class="b">print</span>(<span class="s">"stdout:"</span>, r.stdout)
+<span class="b">print</span>(<span class="s">"stderr:"</span>, r.stderr)
+<span class="b">print</span>(<span class="s">"returncode:"</span>, r.returncode)</code></pre>
+
+<div class="info">
+  <strong>为什么推荐 subprocess</strong>: 列表形式 (<code>["g++", "--version"]</code>) 不走 shell,
+  避免命令注入; <code>capture_output=True</code> 同时拿到 stdout/stderr;
+  <code>text=True</code> 把 bytes 解码成 str, 直接打印; <code>check=True</code> 让非零退出码自动抛异常。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="run-args">3. subprocess.run 核心参数</h2>
+
+<table>
+  <tr><th>参数</th><th>作用</th><th>常见坑</th></tr>
+  <tr>
+    <td><code>args</code></td>
+    <td>命令, 推荐 list 形式</td>
+    <td>字符串形式默认走 shell, 拼接用户输入危险</td>
+  </tr>
+  <tr>
+    <td><code>capture_output</code></td>
+    <td>捕获 stdout+stderr 到 r.stdout/r.stderr</td>
+    <td>等价于 <code>stdout=PIPE, stderr=PIPE</code></td>
+  </tr>
+  <tr>
+    <td><code>text=True</code></td>
+    <td>bytes → str (用系统默认编码)</td>
+    <td>读 C++ 输出里含中文时建议加 <code>encoding="utf-8"</code></td>
+  </tr>
+  <tr>
+    <td><code>check=True</code></td>
+    <td>returncode ≠ 0 时抛 <code>CalledProcessError</code></td>
+    <td>需要配合 <code>try/except</code></td>
+  </tr>
+  <tr>
+    <td><code>timeout=秒数</code></td>
+    <td>超时强杀</td>
+    <td>超时后命令可能仍在后台, 需要手动 <code>proc.kill()</code></td>
+  </tr>
+  <tr>
+    <td><code>cwd=目录</code></td>
+    <td>指定子进程的工作目录</td>
+    <td>替代 <code>cd build &amp;&amp; cmake ..</code></td>
+  </tr>
+  <tr>
+    <td><code>env={...}</code></td>
+    <td>用自定义环境变量启动</td>
+    <td>要做交叉编译时很方便</td>
+  </tr>
+  <tr>
+    <td><code>input="..."</code></td>
+    <td>把数据写进 stdin</td>
+    <td>要求 <code>stdin=PIPE</code>(run 模式自动)</td>
+  </tr>
+</table>
+
+<h3>3.1 shell=True 的双刃剑</h3>
+<pre><code class="lang-py"><span class="c"># 能用管道、通配符、环境变量 —— 但要小心注入</span>
+r = subprocess.run(<span class="s">"echo $OS"</span> <span class="k">if</span> sys.platform != <span class="s">"win32"</span>
+                  <span class="k">else</span> <span class="s">"echo %OS%"</span>,
+                  shell=<span class="b">True</span>, capture_output=<span class="b">True</span>, text=<span class="b">True</span>)
+
+<span class="c"># 千万别这样: 用户输入拼到 shell 字符串里</span>
+user_input = <span class="s">"; rm -rf /"</span>          <span class="c"># 来自不可信源</span>
+subprocess.run(<span class="s">f"echo </span>{user_input}<span class="s">"</span>, shell=<span class="b">True</span>)  <span class="c"># 灾难!</span></code></pre>
+
+<div class="warn">
+  <strong>安全铁律</strong>: 凡是要把外部数据 (用户输入、配置文件、URL) 拼进命令,
+  就用 <strong>列表形式 + shell=False</strong>。Windows 列表形式中, 可执行文件后跟参数即可,
+  不必再加 <code>cmd /c</code>。
+</div>
+
+<h3>3.2 check=True 配合异常处理</h3>
+<pre><code class="lang-py"><span class="k">try</span>:
+    subprocess.run([<span class="s">"g++"</span>, <span class="s">"main.cpp"</span>, <span class="s">"-o"</span>, <span class="s">"main"</span>],
+                   check=<span class="b">True</span>, capture_output=<span class="b">True</span>, text=<span class="b">True</span>)
+    <span class="b">print</span>(<span class="s">"编译成功"</span>)
+<span class="k">except</span> subprocess.CalledProcessError <span class="k">as</span> e:
+    <span class="b">print</span>(<span class="s">f"编译失败 rc=</span>{e.returncode}<span class="s">\n</span>{e.stderr}<span class="s">"</span>)
+<span class="k">except</span> FileNotFoundError <span class="k">as</span> e:
+    <span class="b">print</span>(<span class="s">f"找不到可执行文件: </span>{e}<span class="s">"</span>)</code></pre>
+
+<h3>3.3 timeout 与子进程残留</h3>
+<p>超时不保证子进程会消失 —— 尤其 Windows, <code>subprocess</code> 的 <code>timeout</code> 抛异常后,
+子进程可能还在跑。复杂场景需要 <code>Popen</code> + <code>proc.kill()</code>。</p>
+
+<!-- ============================================================ -->
+<h2 id="capture">4. 捕获 stdout / stderr / 退出码</h2>
+
+<p>这是 C++ 开发者最关心的: 怎么把编译器的 warning 抓出来?</p>
+
+<pre><code class="lang-py"><span class="k">import</span> subprocess, sys
+
+r = subprocess.run(
+    [sys.executable, <span class="s">"-c"</span>,
+     <span class="s">"import sys; print('out'); print('err', file=sys.stderr)"</span>],
+    capture_output=<span class="b">True</span>, text=<span class="b">True</span>,
+)
+<span class="b">print</span>(<span class="s">"stdout:"</span>, repr(r.stdout))   <span class="c"># 'out\n'</span>
+<span class="b">print</span>(<span class="s">"stderr:"</span>, repr(r.stderr))   <span class="c"># 'err\n'</span>
+<span class="b">print</span>(<span class="s">"returncode:"</span>, r.returncode) <span class="c"># 0</span></code></pre>
+
+<h3>4.1 合并到同一个流</h3>
+<p>想看 "C++ 编译器把 warning 打到 stderr" 时, 经常需要让两路合并, 保留顺序:</p>
+<pre><code class="lang-py">r = subprocess.run([<span class="s">"g++"</span>, <span class="s">"main.cpp"</span>],
+                   stdout=subprocess.PIPE,
+                   stderr=subprocess.STDOUT,    <span class="c"># 把 stderr 合并到 stdout</span>
+                   text=<span class="b">True</span>)
+<span class="b">print</span>(r.stdout)  <span class="c"># stdout 和 stderr 在一起, 按写入顺序</span></code></pre>
+
+<h3>4.2 解析 GCC/Clang 的 warning 行</h3>
+<pre><code class="lang-py"><span class="k">import</span> re
+warnings = re.findall(<span class="s">r"^(.*?):(\d+):(\d+):\s+(warning|error):\s+(.*)$"</span>,
+                     r.stderr, re.MULTILINE)
+<span class="k">for</span> file, line, col, level, msg <span class="k">in</span> warnings:
+    <span class="b">print</span>(<span class="s">f"</span>{level.upper()}<span class="s">  </span>{file}:{line}:{col}<span class="s">  </span>{msg}<span class="s">"</span>)</code></pre>
+<p>这一行, 等价于你以前在 C++ 里写 <code>std::regex_search</code> + 字符串切分 —— Day 06 的
+正则技能正好用上。</p>
+
+<!-- ============================================================ -->
+<h2 id="popen">5. Popen 实时流式输出</h2>
+
+<p>编译大项目时, 等 30 秒后突然看见一大坨报错, 体验很差。最好"边跑边打", 像 <code>tail -f</code>。
+这时候需要 <code>Popen</code> + 逐行迭代 stdout:</p>
+
+<pre><code class="lang-py"><span class="k">import</span> subprocess
+
+proc = subprocess.Popen(
+    [<span class="s">"cmake"</span>, <span class="s">"--build"</span>, <span class="s">"build"</span>, <span class="s">"-j"</span>],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,
+    text=<span class="b">True</span>,
+    bufsize=<span class="n">1</span>,        <span class="c"># 行缓冲</span>
+)
+
+<span class="k">for</span> line <span class="k">in</span> proc.stdout:        <span class="c"># 子进程关闭 stdout 后, 迭代自动结束</span>
+    <span class="b">print</span>(<span class="s">"  >>"</span>, line, end=<span class="s">""</span>)
+    <span class="c"># 这里可以再过滤 / 落盘 / 推送到 Web</span>
+
+proc.wait()                       <span class="c"># 必须 wait 拿退出码</span>
+<span class="k">if</span> proc.returncode != <span class="n">0</span>:
+    <span class="b">print</span>(<span class="s">"构建失败"</span>)</code></pre>
+
+<div class="tip">
+  <strong>进阶技巧</strong>: 真正想做 CI 工具时, 用 <code>threading.Thread</code> 单独读 stdout/stderr,
+  避免管道 buffer 写满导致子进程卡死。Python 官方文档有详细例子。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="stdin">6. 通过 stdin 喂数据给子进程</h2>
+
+<p>很多命令行工具是"读 stdin 干活的": <code>bc</code>、<code>python -i</code>、你自己写的
+<code>std::cin &gt;&gt; ...</code> 测试程序。Python 几行就能驱动它们:</p>
+
+<pre><code class="lang-py">r = subprocess.run(
+    [sys.executable, <span class="s">"-c"</span>,
+     <span class="s">"name = input('name: '); print(f'hello </span>{name}<span class="s">')"</span>],
+    input=<span class="s">"Nova\n"</span>,
+    capture_output=<span class="b">True</span>, text=<span class="b">True</span>,
+)
+<span class="b">print</span>(r.stdout)  <span class="c"># "name: hello Nova\n"</span></code></pre>
+
+<p>对应 C 里写起来很痛苦:</p>
+<pre><code class="lang-cpp"><span class="c">// C 视角: 你得自己管 pipe + fork + dup2</span>
+<span class="k">int</span> fds[<span class="n">2</span>]; pipe(fds);
+pid_t pid = fork();
+<span class="k">if</span> (pid == <span class="n">0</span>) {              <span class="c">// 子进程</span>
+    close(fds[<span class="n">1</span>]);
+    dup2(fds[<span class="n">0</span>], STDIN_FILENO);
+    execl(<span class="s">"./myprog"</span>, <span class="s">"myprog"</span>, <span class="b">NULL</span>);
+}
+close(fds[<span class="n">0</span>]);
+write(fds[<span class="n">1</span>], <span class="s">"Nova\n"</span>, <span class="n">5</span>);
+close(fds[<span class="n">1</span>]);
+waitpid(pid, <span class="b">NULL</span>, <span class="n">0</span>);</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="cpp-flow">7. 实战: 编译并运行 C++ 程序</h2>
+
+<p>把前面所有点串起来: 自动找编译器、编译、跑测试、收集结果。</p>
+
+<pre><code class="lang-py"><span class="k">import</span> shutil, subprocess
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="c"># C++ 里要 SearchPathW / access(..., X_OK), Python 一行</span>
+compiler = <span class="b">None</span>
+<span class="k">for</span> cand <span class="k">in</span> ([<span class="s">"g++"</span>], [<span class="s">"clang++"</span>]):
+    <span class="k">if</span> shutil.which(cand[<span class="n">0</span>]) <span class="k">is not</span> <span class="b">None</span>:
+        compiler = cand
+        <span class="k">break</span>
+
+src = Path(<span class="s">"main.cpp"</span>)
+exe = src.with_suffix(<span class="s">".exe"</span>) <span class="k">if</span> sys.platform == <span class="s">"win32"</span> <span class="k">else</span> src.with_suffix(<span class="s">""</span>)
+
+<span class="c"># 编译</span>
+cr = subprocess.run(compiler + [<span class="s">"-std=c++17"</span>, <span class="s">"-O2"</span>, <span class="s">"-Wall"</span>,
+                              <span class="b">str</span>(src), <span class="s">"-o"</span>, <span class="b">str</span>(exe)],
+                     capture_output=<span class="b">True</span>, text=<span class="b">True</span>)
+<span class="k">if</span> cr.returncode != <span class="n">0</span>:
+    <span class="b">print</span>(<span class="s">"编译失败:"</span>, cr.stderr)
+    sys.exit(<span class="n">1</span>)
+
+<span class="c"># 运行</span>
+rr = subprocess.run([<span class="b">str</span>(exe)], capture_output=<span class="b">True</span>, text=<span class="b">True</span>)
+<span class="b">print</span>(<span class="s">"stdout:"</span>, rr.stdout)
+<span class="b">print</span>(<span class="s">"rc:"</span>, rr.returncode)
+
+exe.unlink()  <span class="c"># 清理产物</span></code></pre>
+
+<h3>7.1 处理跨平台路径</h3>
+<p>Windows 的可执行文件要加 <code>.exe</code>, 路径分隔符也不同。用 <code>pathlib.Path</code> 可以让
+脚本在两个平台都跑:</p>
+
+<pre><code class="lang-py"><span class="k">from</span> pathlib <span class="k">import</span> Path, PureWindowsPath, PurePosixPath
+src = Path(<span class="s">"src"</span>) / <span class="s">"main.cpp"</span>     <span class="c"># 跨平台都行, 自动选分隔符</span>
+<span class="b">print</span>(src)                          <span class="c"># Windows: src\main.cpp / Linux: src/main.cpp</span></code></pre>
+
+<!-- ============================================================ -->
+<h2 id="log">8. 实战: 把构建日志写到文件</h2>
+
+<p>CI / 自动化测试必备: 把子进程输出<strong>实时</strong>同时打到屏幕 + 文件。</p>
+
+<pre><code class="lang-py"><span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">import</span> subprocess
+
+log = Path(<span class="s">"build.log"</span>).open(<span class="s">"w"</span>, encoding=<span class="s">"utf-8"</span>)
+proc = subprocess.Popen(
+    [<span class="s">"cmake"</span>, <span class="s">"--build"</span>, <span class="s">"build"</span>, <span class="s">"-j"</span>],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,
+    text=<span class="b">True</span>, bufsize=<span class="n">1</span>,
+)
+<span class="k">for</span> line <span class="k">in</span> proc.stdout:
+    <span class="b">print</span>(line, end=<span class="s">""</span>)    <span class="c"># 屏幕</span>
+    log.write(line)        <span class="c"># 文件</span>
+proc.wait()
+log.close()
+<span class="b">print</span>(<span class="s">f"日志: build.log, returncode = </span>{proc.returncode}<span class="s">"</span>)</code></pre>
+
+<div class="tip">
+  <strong>经验</strong>: <code>text=True</code> + <code>bufsize=1</code> 表示行缓冲的文本模式。
+  Python 3.7+ 推荐用 <code>encoding="utf-8"</code> 显式指定编码, 避免跨平台 (Windows 中文环境用 GBK) 踩坑。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="shlex">9. shlex 与跨平台命令解析</h2>
+
+<p>用户传进来一串命令, 你想"安全地"拆成列表, 交给 <code>subprocess.run</code>:</p>
+
+<pre><code class="lang-py"><span class="k">import</span> shlex, sys
+cmd = <span class="s">'g++ -std=c++17 -O2 -DFOO=1 main.cpp -o main'</span>
+args = shlex.split(cmd, posix=(sys.platform != <span class="s">"win32"</span>))
+<span class="b">print</span>(args)
+<span class="c"># ['g++', '-std=c++17', '-O2', '-DFOO=1', 'main.cpp', '-o', 'main']</span></code></pre>
+
+<div class="warn">
+  Windows 上 posix 模式要设为 <code>False</code>, 否则引号解析规则不对 (Windows 用双引号包裹路径,
+  路径里可以含空格但不能含 <code>"</code>。posix 模式下反了)。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="safety">10. 安全与常见坑</h2>
+
+<h3>10.1 跨平台命令差异</h3>
+<table>
+  <tr><th>差异点</th><th>Windows</th><th>Linux/macOS</th></tr>
+  <tr><td>可执行后缀</td><td><code>.exe</code></td><td>无</td></tr>
+  <tr><td>查找命令</td><td><code>where</code></td><td><code>which</code></td></tr>
+  <tr><td>环境变量引用</td><td><code>%PATH%</code></td><td><code>$PATH</code></td></tr>
+  <tr><td>路径分隔符</td><td><code>;</code></td><td><code>:</code></td></tr>
+  <tr><td>默认编码</td><td>GBK / CP936</td><td>UTF-8</td></tr>
+  <tr><td>杀死进程</td><td><code>taskkill /F /PID xxx</code></td><td><code>kill -9 xxx</code></td></tr>
+</table>
+
+<p>最佳实践: 用 <code>pathlib.Path</code>、<code>os.environ</code>、<code>shutil.which</code>,
+而不是自己拼路径和命令。</p>
+
+<h3>10.2 死锁 (Deadlock)</h3>
+<p>常见 bug: <code>capture_output=True</code> + 不读输出, 子进程的管道 buffer
+(通常 4KB) 写满就阻塞。</p>
+<pre><code class="lang-py"><span class="c"># 错误: 这个程序可能永远卡住</span>
+proc = subprocess.Popen([<span class="s">"yes"</span>], stdout=subprocess.PIPE)
+proc.wait()                <span class="c"># yes 会一直写, 没人读, 死锁!</span>
+
+<span class="c"># 正确: 读掉 / 或丢到 DEVNULL</span>
+proc = subprocess.Popen([<span class="s">"yes"</span>], stdout=subprocess.DEVNULL)
+proc.wait()</code></pre>
+
+<h3>10.3 进程组与会话</h3>
+<p>有时子进程会 fork 孙子进程 (比如 <code>make -j</code> 启动的 worker), 直接 <code>proc.kill()</code>
+只杀父进程, 孙子成为孤儿。用 <code>Popen(start_new_session=True)</code> 启动新会话,
+然后用 <code>os.killpg()</code> 整组杀。</p>
+
+<!-- ============================================================ -->
+<h2 id="tool">11. 实战工具: cpp_build_runner.py</h2>
+
+<p>本目录附带 <code>cpp_build_runner.py</code>, 把"编译 + 运行 + 报告"三件套打包:</p>
+
+<pre><code class="lang-shell">$ python cpp_build_runner.py main.cpp --arg alpha --arg beta \
+                                  --extra -O2 --extra -Wall \
+                                  --report build.json
+[+] 编译器: g++
+[+] 源文件: main.cpp  (123 bytes)
+[+] 目标文件: main.exe
+[*] 编译中 ...
+    returncode = 0  (0.842s)
+[*] 运行中 ...
+    returncode = 0  (0.012s)
+    --- stdout ---
+    Hello from C++!
+      argv[0] = main.exe
+      argv[1] = alpha
+      argv[2] = beta
+[+] 报告已写入: build.json</code></pre>
+
+<p>JSON 报告示例:</p>
+<pre><code class="lang-py">{
+  <span class="s">"source"</span>: <span class="s">"main.cpp"</span>,
+  <span class="s">"compiler"</span>: [<span class="s">"g++"</span>],
+  <span class="s">"std"</span>: <span class="s">"c++17"</span>,
+  <span class="s">"compile"</span>: {<span class="s">"ok"</span>: <span class="b">true</span>, <span class="s">"returncode"</span>: <span class="n">0</span>, <span class="s">"seconds"</span>: <span class="n">0.842</span>, ...},
+  <span class="s">"run"</span>:     {<span class="s">"ok"</span>: <span class="b">true</span>, <span class="s">"returncode"</span>: <span class="n">0</span>, <span class="s">"seconds"</span>: <span class="n">0.012</span>, ...},
+  <span class="s">"summary"</span>: {<span class="s">"build_ok"</span>: <span class="b">true</span>, <span class="s">"run_ok"</span>: <span class="b">true</span>, <span class="s">"total_seconds"</span>: <span class="n">0.854</span>}
+}</code></pre>
+
+<p>这个工具可以:</p>
+<ul>
+  <li>写 CI 脚本时直接 <code>subprocess.run(["python", "cpp_build_runner.py", ...])</code></li>
+  <li>把 <code>build.json</code> 存到 artifacts, 后续做趋势分析</li>
+  <li>教学场景: 学生改完代码, 老师跑一遍这个脚本, 报告里就有完整数据</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="summary">12. 小结与练习</h2>
+
+<h3>本节核心知识</h3>
+<ul>
+  <li><code>os.system</code> / <code>os.popen</code> 都能用, 但 <strong>推荐 <code>subprocess.run</code></strong></li>
+  <li>列表形式 + <code>shell=False</code> 是安全姿势, 拼接用户输入必须用</li>
+  <li><code>capture_output=True</code> + <code>text=True</code> 一行拿到 stdout/stderr</li>
+  <li><code>check=True</code> + <code>timeout=</code> + <code>CWD</code> + <code>env=</code> 是四大控制开关</li>
+  <li>实时输出要 <code>Popen</code> + 逐行迭代 stdout</li>
+  <li><code>shlex.split</code> 可以安全地把字符串命令拆成 list</li>
+  <li>跨平台记住: 显式 <code>encoding="utf-8"</code>、<code>shutil.which</code>、<code>pathlib</code></li>
+  <li>死锁是新手最常踩的坑: 不读输出 + 满 buffer</li>
+</ul>
+
+<h3>练习</h3>
+<ol>
+  <li>写一个脚本, 找当前目录所有 <code>.cpp</code> 文件, 逐个调用 <code>g++ -fsyntax-only</code> 做语法检查, 统计每个文件有几条 warning。</li>
+  <li>扩展 <code>cpp_build_runner.py</code>: 支持 <code>--rerun-on-change</code>, 用文件 mtime 判断是否需要重新编译。</li>
+  <li>写一个跨平台的 "process info" 工具: 给定 PID, 打印进程名、命令行、占用内存。
+    Windows 用 <code>wmic</code>, Linux 用 <code>ps</code>。把结果合并成统一的 JSON。</li>
+  <li>挑战: 写一个 Popen 包装类, 同时在屏幕 + 日志文件实时输出, 并支持 Ctrl-C 杀掉整个进程组。</li>
+</ol>
+
+<div class="info">
+  <strong>下一步</strong>: 明天 <a href="#">Day 08</a> 讲 <code>ctypes</code> 与 <code>pybind11</code> —
+  真正的"Python 直接调 C++ 动态库", 不用再启动子进程, 性能快几个数量级。
+</div>
+
+<p style="text-align:center; color:var(--fg2); margin-top:3rem">
+  — Day 07 完 —  配套脚本: <code>day07_basics.py</code>, <code>cpp_build_runner.py</code> —
+</p>
+
+</body>
+</html>

@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 08: ctypes / pybind11 —— Python 调用 C++</title>
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --bg2: #282a36;
+    --bg3: #313244;
+    --fg: #cdd6f4;
+    --fg2: #a6adc8;
+    --accent: #89b4fa;
+    --accent2: #f38ba8;
+    --accent3: #a6e3a1;
+    --accent4: #fab387;
+    --accent5: #cba6f7;
+    --code-bg: #181825;
+    --border: #45475a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 {
+    color: var(--accent);
+    font-size: 2rem;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  h2 {
+    color: var(--accent3);
+    font-size: 1.5rem;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid var(--accent3);
+    padding-left: 0.8rem;
+  }
+  h3 {
+    color: var(--accent4);
+    font-size: 1.2rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.6rem;
+  }
+  h4 {
+    color: var(--accent5);
+    font-size: 1.05rem;
+    margin-top: 1rem;
+    margin-bottom: 0.4rem;
+  }
+  p, li { color: var(--fg); }
+  ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+  li { margin-bottom: 0.3rem; }
+  code {
+    background: var(--code-bg);
+    color: var(--accent3);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.95em;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 0.8rem 0 1.2rem;
+  }
+  pre code {
+    background: transparent;
+    color: var(--fg);
+    padding: 0;
+    border-radius: 0;
+    line-height: 1.55;
+  }
+  .lang-cpp   .k { color: #cba6f7; }
+  .lang-cpp   .s { color: #a6e3a1; }
+  .lang-cpp   .c { color: #6c7086; font-style: italic; }
+  .lang-cpp   .n { color: #fab387; }
+  .lang-cpp   .t { color: #89b4fa; }
+  .lang-py    .k { color: #cba6f7; }
+  .lang-py    .s { color: #a6e3a1; }
+  .lang-py    .c { color: #6c7086; font-style: italic; }
+  .lang-py    .n { color: #fab387; }
+  .lang-py    .b { color: #f38ba8; }
+  .lang-shell .c { color: #6c7086; font-style: italic; }
+  .lang-shell .s { color: #a6e3a1; }
+  .tip {
+    background: var(--bg3);
+    border-left: 4px solid var(--accent4);
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+  }
+  .warn {
+    background: var(--bg3);
+    border-left: 4px solid var(--accent2);
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+  }
+  .info {
+    background: var(--bg3);
+    border-left: 4px solid var(--accent);
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    background: var(--bg2);
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.8rem;
+    text-align: left;
+  }
+  th { background: var(--bg3); color: var(--accent); }
+  .toc {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .toc ul { list-style: none; margin-left: 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .badge {
+    display: inline-block;
+    background: var(--accent5);
+    color: var(--bg);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-right: 0.3rem;
+  }
+  .badge-c { background: var(--accent4); }
+  .badge-py { background: var(--accent3); }
+</style>
+</head>
+<body>
+
+<h1>Day 08: ctypes / pybind11 —— Python 调用 C++</h1>
+
+<div class="toc">
+  <h3 style="margin-top:0">目录</h3>
+  <ul>
+    <li><a href="#why">为什么要在 Python 里调用 C++</a></li>
+    <li><a href="#overview">两条路线总览: ctypes vs pybind11</a></li>
+    <li><a href="#ctypes-basics">ctypes 基础: 加载 DLL / .so</a></li>
+    <li><a href="#ctypes-types">ctypes 类型映射</a></li>
+    <li><a href="#ctypes-struct">ctypes 结构体与指针</a></li>
+    <li><a href="#ctypes-callback">ctypes 回调函数 (C 调 Python)</a></li>
+    <li><a href="#ctypes-array">ctypes 数组与缓冲区</a></li>
+    <li><a href="#ctypes-gotcha">ctypes 常见坑与陷阱</a></li>
+    <li><a href="#pybind11-intro">pybind11 入门: 编写 C++ 扩展</a></li>
+    <li><a href="#pybind11-build">pybind11 编译与安装</a></li>
+    <li><a href="#pybind11-class">pybind11 绑定 C++ 类</a></li>
+    <li><a href="#pybind11-stl">pybind11 自动转换 STL 容器</a></li>
+    <li><a href="#pybind11-callback">pybind11 回调与 lambda</a></li>
+    <li><a href="#pybind11-exception">pybind11 异常透传</a></li>
+    <li><a href="#pybind11-numpy">pybind11 + numpy: 高性能数值计算</a></li>
+    <li><a href="#comparison">ctypes vs pybind11 完整对比</a></li>
+    <li><a href="#tool">实战工具: C++ 库函数签名扫描器</a></li>
+    <li><a href="#summary">小结与练习</a></li>
+  </ul>
+</div>
+
+<div class="info">
+  <strong>今日目标</strong>: 学会两种让 Python 直接调用 C/C++ 代码的方式 —— <code>ctypes</code>（零编译,
+  调 C DLL）和 <code>pybind11</code>（需编译, 调 C++ 类/模板/STL）。这是 Python 作为"C++ 开发辅助工具"
+  最核心的能力: 既能反过来调你的 C++ 库做性能测试, 也能为 C++ 代码写 Python 绑定做快速验证。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="why">1. 为什么要在 Python 里调用 C++</h2>
+
+<p>前面 7 天我们学了 Python 的各种"外围"能力: 文件处理、正则、subprocess。但有一件事
+shell 脚本永远做不了 —— <strong>直接调用 C++ 函数, 拿到返回值, 在 Python 里进一步处理</strong>。</p>
+
+<p>典型场景:</p>
+<ul>
+  <li><strong>性能瓶颈</strong>: 某个算法已经用 C++ 写好且优化过, Python 侧不想重写</li>
+  <li><strong>复用已有库</strong>: 公司内部 C++ SDK, 想用 Python 快速写个测试脚手架</li>
+  <li><strong>数值计算</strong>: C++ 做矩阵运算, Python 做数据可视化</li>
+  <li><strong>逆向/调试辅助</strong>: 在 Python 里 fuzz 一个 C++ 函数, 看它在各种输入下的行为</li>
+  <li><strong>给 C++ 写 Python 绑定</strong>: 像 pytorch, opencv 那样, 让 C++ 引擎暴露 Python API</li>
+</ul>
+
+<div class="tip">
+  <strong>核心思路</strong>: Python 代码 → 通过某种桥接机制 → 进入 C/C++ 编译后的机器码 → 拿到返回值 → 回到 Python。
+  这个"桥接机制"有两种主流方案, 下面逐一讲解。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="overview">2. 两条路线总览: ctypes vs pybind11</h2>
+
+<table>
+  <tr>
+    <th>维度</th>
+    <th>ctypes (标准库)</th>
+    <th>pybind11 (第三方)</th>
+  </tr>
+  <tr>
+    <td>安装</td>
+    <td>Python 自带, 零依赖</td>
+    <td>需 <code>pip install pybind11</code></td>
+  </tr>
+  <tr>
+    <td>C/C++ 端要求</td>
+    <td>只需 C ABI (extern "C"), 编译成 .dll/.so</td>
+    <td>需要 C++ 源码 + 编译扩展模块</td>
+  </tr>
+  <tr>
+    <td>调用 C++ 类</td>
+    <td>❌ 不支持 (只能调 C 函数)</td>
+    <td>✅ 原生支持类、继承、虚函数</td>
+  </tr>
+  <tr>
+    <td>STL 容器转换</td>
+    <td>❌ 需手动处理</td>
+    <td>✅ 自动转换 list/dict/vector/map</td>
+  </tr>
+  <tr>
+    <td>性能开销</td>
+    <td>略高 (每次调用做类型检查)</td>
+    <td>低 (编译时生成胶水代码)</td>
+  </tr>
+  <tr>
+    <td>异常处理</td>
+    <td>❌ 无法透传 C++ 异常</td>
+    <td>✅ C++ exception → Python exception</td>
+  </tr>
+  <tr>
+    <td>适用场景</td>
+    <td>调用现成 C 库 (libc, Win32 API, OpenSSL)</td>
+    <td>为 C++ 项目写 Python 绑定</td>
+  </tr>
+</table>
+
+<div class="info">
+  <strong>选择建议</strong>: 如果你是<strong>调用别人编好的 .dll/.so</strong>, 用 <code>ctypes</code>。如果是
+  <strong>自己有 C++ 源码, 想暴露给 Python</strong>, 用 <code>pybind11</code>。两者不冲突, 可以在同一项目中共存。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="ctypes-basics">3. ctypes 基础: 加载 DLL / .so</h2>
+
+<h3>3.1 编译一个 C 共享库</h3>
+
+<p>先写一个简单的 C++ 文件, 用 <code>extern "C"</code> 导出 C ABI 函数:</p>
+
+<pre><code class="lang-cpp"><span class="c">// math_lib.cpp —— 要被 Python 调用的 C++ 代码</span>
+<span class="k">#include</span> <span class="s">&lt;cstdint&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;cstring&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;cstdlib&gt;</span>
+
+<span class="c">// 关键: extern "C" 告诉编译器用 C 链接约定 (不做 name mangling)</span>
+<span class="k">extern</span> <span class="s">"C"</span> {
+
+<span class="t">int32_t</span> add(<span class="t">int32_t</span> a, <span class="t">int32_t</span> b) {
+    <span class="k">return</span> a + b;
+}
+
+<span class="t">double</span> multiply(<span class="t">double</span> a, <span class="t">double</span> b) {
+    <span class="k">return</span> a * b;
+}
+
+<span class="c">// 字符串处理: 返回一个新分配的字符串, 调用方负责 free</span>
+<span class="k">const</span> <span class="t">char</span>* greet(<span class="k">const</span> <span class="t">char</span>* name) {
+    <span class="t">size_t</span> len = std::strlen(name) + <span class="n">8</span>;
+    <span class="t">char</span>* buf = <span class="k">static_cast</span>&lt;<span class="t">char</span>*&gt;(std::malloc(len));
+    std::snprintf(buf, len, <span class="s">"Hello, %s!"</span>, name);
+    <span class="k">return</span> buf;
+}
+
+<span class="c">// 释放由 greet 返回的内存</span>
+<span class="k">void</span> free_string(<span class="t">char</span>* ptr) {
+    std::free(ptr);
+}
+
+}  <span class="c">// extern "C"</span></code></pre>
+
+<p>编译命令 (跨平台):</p>
+
+<pre><code class="lang-shell"><span class="c"># Windows (MSVC)</span>
+cl /LD math_lib.cpp /Fe:math_lib.dll
+
+<span class="c"># Windows (MinGW)</span>
+g++ -shared -o math_lib.dll math_lib.cpp
+
+<span class="c"># Linux / macOS</span>
+g++ -shared -fPIC -o libmath_lib.so math_lib.cpp</code></pre>
+
+<h3>3.2 Python 端用 ctypes 加载</h3>
+
+<pre><code class="lang-py"><span class="k">import</span> ctypes
+<span class="k">import</span> os
+
+<span class="c"># 加载共享库 —— Windows 用 .dll, Linux 用 .so, macOS 用 .dylib</span>
+<span class="c"># C++ 对比: 相当于 LoadLibrary() / dlopen()</span>
+<span class="k">if</span> os.name == <span class="s">"nt"</span>:  <span class="c"># Windows</span>
+    lib = ctypes.CDLL(<span class="s">"math_lib.dll"</span>)
+<span class="k">else</span>:
+    lib = ctypes.CDLL(<span class="s">"./libmath_lib.so"</span>)
+
+<span class="c"># 调用 add 函数</span>
+<span class="c"># 注意: ctypes 默认假设返回 int, 如果返回 double 需要声明 restype</span>
+result = lib.add(<span class="n">3</span>, <span class="n">5</span>)
+<span class="b">print</span>(<span class="s">f"add(3, 5) = {result}"</span>)  <span class="c"># 8</span>
+
+<span class="c"># 调用 multiply —— 需要指定返回类型, 否则被截断成 int!</span>
+lib.multiply.restype = ctypes.c_double
+lib.multiply.argtypes = [ctypes.c_double, ctypes.c_double]
+result = lib.multiply(<span class="n">3.14</span>, <span class="n">2.0</span>)
+<span class="b">print</span>(<span class="s">f"multiply(3.14, 2.0) = {result}"</span>)  <span class="c"># 6.28</span></code></pre>
+
+<div class="warn">
+  <strong>致命陷阱</strong>: 如果不设置 <code>restype</code>, ctypes 默认认为函数返回 <code>int</code>。
+  调 <code>multiply(3.14, 2.0)</code> 时, 返回的 <code>double</code> 会被按 <code>int</code> 解释,
+  你可能拿到一个垃圾值甚至段错误。<strong>永远显式声明 argtypes 和 restype!</strong>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="ctypes-types">4. ctypes 类型映射</h2>
+
+<p>ctypes 提供了一套完整的 C 类型对应物:</p>
+
+<table>
+  <tr><th>C 类型</th><th>ctypes 类型</th><th>Python 类型</th></tr>
+  <tr><td>int</td><td>ctypes.c_int</td><td>int</td></tr>
+  <tr><td>unsigned int</td><td>ctypes.c_uint</td><td>int</td></tr>
+  <tr><td>long</td><td>ctypes.c_long</td><td>int</td></tr>
+  <tr><td>long long</td><td>ctypes.c_longlong</td><td>int</td></tr>
+  <tr><td>float</td><td>ctypes.c_float</td><td>float</td></tr>
+  <tr><td>double</td><td>ctypes.c_double</td><td>float</td></tr>
+  <tr><td>char</td><td>ctypes.c_char</td><td>bytes (单字节)</td></tr>
+  <tr><td>char*</td><td>ctypes.c_char_p</td><td>bytes 或 None</td></tr>
+  <tr><td>wchar_t*</td><td>ctypes.c_wchar_p</td><td>str</td></tr>
+  <tr><td>void*</td><td>ctypes.c_void_p</td><td>int 或 None</td></tr>
+  <tr><td>bool</td><td>ctypes.c_bool</td><td>bool</td></tr>
+  <tr><td>size_t</td><td>ctypes.c_size_t</td><td>int</td></tr>
+</table>
+
+<h3>4.1 argtypes: 编译时级别的安全网</h3>
+
+<pre><code class="lang-py"><span class="c"># C++ 对比: 声明函数指针类型</span>
+<span class="c"># typedef int32_t (*add_t)(int32_t, int32_t);</span>
+
+<span class="c"># Python: 声明参数类型, ctypes 会自动做类型转换和检查</span>
+lib.add.argtypes = [ctypes.c_int32, ctypes.c_int32]
+lib.add.restype = ctypes.c_int32
+
+<span class="c"># 现在即使传 Python int 也会自动转 c_int32</span>
+<span class="c"># 传错类型会报 TypeError, 而不是段错误</span>
+result = lib.add(<span class="n">10</span>, <span class="n">20</span>)  <span class="c"># OK</span>
+<span class="c"># lib.add("hello", 20)  # TypeError!</span></code></pre>
+
+<h3>4.2 字符串: bytes vs str</h3>
+
+<pre><code class="lang-py"><span class="c"># C 函数: const char* greet(const char* name)</span>
+<span class="c"># ctypes 中 c_char_p 对应 bytes, 不是 str!</span>
+
+<span class="c"># 正确: 传 bytes</span>
+lib.greet.restype = ctypes.c_char_p
+lib.greet.argtypes = [ctypes.c_char_p]
+
+greeting = lib.greet(<span class="s">b"World"</span>)  <span class="c"># 返回 b"Hello, World!"</span>
+<span class="b">print</span>(greeting.decode(<span class="s">"utf-8"</span>))
+
+<span class="c"># 错误: 传 str 会 TypeError</span>
+<span class="c"># lib.greet("World")  # ❌</span>
+
+<span class="c"># 用 c_wchar_p 可以直接传 str, 但只适合宽字符 API</span>
+<span class="c"># Windows API 很多用 LPCWSTR (wchar_t*)</span></code></pre>
+
+<!-- ============================================================ -->
+<h2 id="ctypes-struct">5. ctypes 结构体与指针</h2>
+
+<h3>5.1 定义 C 结构体的 Python 映射</h3>
+
+<pre><code class="lang-cpp"><span class="c">// C++ 侧</span>
+<span class="k">struct</span> Point {
+    <span class="t">double</span> x;
+    <span class="t">double</span> y;
+    <span class="t">int</span>    label;
+};
+
+<span class="k">extern</span> <span class="s">"C"</span> {
+    <span class="t">double</span> distance(<span class="k">const</span> Point* a, <span class="k">const</span> Point* b);
+    Point   midpoint(<span class="k">const</span> Point* a, <span class="k">const</span> Point* b);  <span class="c">// 按值返回结构体</span>
+    <span class="t">void</span>   translate(Point* p, <span class="t">double</span> dx, <span class="t">double</span> dy);  <span class="c">// 就地修改</span>
+}</code></pre>
+
+<pre><code class="lang-py"><span class="k">import</span> ctypes
+<span class="k">import</span> math
+
+<span class="c"># Python 侧定义对应的 Structure</span>
+<span class="c"># C++ 对比: 需要手动保证字段顺序和大小一致</span>
+<span class="k">class</span> <span class="t">Point</span>(ctypes.Structure):
+    _fields_ = [
+        (<span class="s">"x"</span>, ctypes.c_double),
+        (<span class="s">"y"</span>, ctypes.c_double),
+        (<span class="s">"label"</span>, ctypes.c_int),
+    ]
+
+<span class="c"># 声明函数签名</span>
+lib.distance.argtypes = [
+    ctypes.POINTER(Point),   <span class="c"># const Point*</span>
+    ctypes.POINTER(Point),
+]
+lib.distance.restype = ctypes.c_double
+
+lib.midpoint.argtypes = [ctypes.POINTER(Point), ctypes.POINTER(Point)]
+lib.midpoint.restype = Point  <span class="c"># 按值返回结构体</span>
+
+lib.translate.argtypes = [ctypes.POINTER(Point), ctypes.c_double, ctypes.c_double]
+lib.translate.restype = <span class="b">None</span>  <span class="c"># void</span>
+
+<span class="c"># 创建 Point 实例</span>
+p1 = Point(<span class="n">0.0</span>, <span class="n">0.0</span>, <span class="n">1</span>)
+p2 = Point(<span class="n">3.0</span>, <span class="n">4.0</span>, <span class="n">2</span>)
+
+<span class="c"># 调用 —— ctypes 自动取地址 (传 &p1)</span>
+d = lib.distance(ctypes.byref(p1), ctypes.byref(p2))
+<span class="b">print</span>(<span class="s">f"distance = {d}"</span>)  <span class="c"># 5.0</span>
+
+<span class="c"># 按值返回结构体</span>
+mid = lib.midpoint(ctypes.byref(p1), ctypes.byref(p2))
+<span class="b">print</span>(<span class="s">f"midpoint = ({mid.x}, {mid.y}, label={mid.label})"</span>)
+
+<span class="c"># 就地修改</span>
+lib.translate(ctypes.byref(p1), <span class="n">10.0</span>, <span class="n">20.0</span>)
+<span class="b">print</span>(<span class="s">f"after translate: p1 = ({p1.x}, {p1.y})"</span>)  <span class="c"># (10.0, 20.0)</span></code></pre>
+
+<div class="tip">
+  <strong>byref vs pointer</strong>: <code>ctypes.byref(obj)</code> 等价于 C 的 <code>&obj</code>, 但更快
+  (不创建中间对象)。<code>ctypes.pointer(obj)</code> 创建完整的指针对象, 如果你需要在 Python 侧
+  修改指针本身 (如 <code>ptr = ptr + 1</code>), 用 <code>pointer</code>; 只是传地址给 C 函数, 用 <code>byref</code>。
+</div>
+
+<h3>5.2 指针与输出参数</h3>
+
+<pre><code class="lang-cpp"><span class="c">// C++: 通过指针返回多个值</span>
+<span class="k">extern</span> <span class="s">"C"</span> <span class="t">void</span> minmax(<span class="k">const</span> <span class="t">int</span>* arr, <span class="t">size_t</span> n,
+                         <span class="t">int</span>* out_min, <span class="t">int</span>* out_max) {
+    <span class="t">int</span> mn = arr[<span class="n">0</span>], mx = arr[<span class="n">0</span>];
+    <span class="k">for</span> (<span class="t">size_t</span> i = <span class="n">1</span>; i &lt; n; ++i) {
+        <span class="k">if</span> (arr[i] &lt; mn) mn = arr[i];
+        <span class="k">if</span> (arr[i] &gt; mx) mx = arr[i];
+    }
+    *out_min = mn;
+    *out_max = mx;
+}</code></pre>
+
+<pre><code class="lang-py"><span class="c"># Python 侧调用</span>
+lib.minmax.argtypes = [
+    ctypes.POINTER(ctypes.c_int),  <span class="c"># const int* arr</span>
+    ctypes.c_size_t,               <span class="c"># size_t n</span>
+    ctypes.POINTER(ctypes.c_int),  <span class="c"># int* out_min</span>
+    ctypes.POINTER(ctypes.c_int),  <span class="c"># int* out_max</span>
+]
+lib.minmax.restype = <span class="b">None</span>
+
+<span class="c"># 创建 C 数组</span>
+arr = (ctypes.c_int * <span class="n">5</span>)(<span class="n">3</span>, <span class="n">1</span>, <span class="n">4</span>, <span class="n">1</span>, <span class="n">5</span>)
+
+<span class="c"># 创建输出变量</span>
+out_min = ctypes.c_int()
+out_max = ctypes.c_int()
+
+lib.minmax(arr, <span class="b">len</span>(arr), ctypes.byref(out_min), ctypes.byref(out_max))
+<span class="b">print</span>(<span class="s">f"min={out_min.value}, max={out_max.value}"</span>)  <span class="c"># min=1, max=5</span></code></pre>
+
+<!-- ============================================================ -->
+<h2 id="ctypes-callback">6. ctypes 回调函数 (C 调 Python)</h2>
+
+<p>有时 C 库需要你传入一个函数指针, 它会在某个时刻回调。ctypes 用 <code>CFUNCTYPE</code> 创建
+C 兼容的回调函数对象。</p>
+
+<pre><code class="lang-cpp"><span class="c">// C++: 一个通用的遍历函数, 接受回调</span>
+<span class="k">typedef</span> <span class="t">void</span> (*Callback)(<span class="t">int</span> index, <span class="t">double</span> value);
+
+<span class="k">extern</span> <span class="s">"C"</span> <span class="t">void</span> for_each_value(<span class="k">const</span> <span class="t">double</span>* data,
+                                   <span class="t">size_t</span> n,
+                                   Callback cb) {
+    <span class="k">for</span> (<span class="t">size_t</span> i = <span class="n">0</span>; i &lt; n; ++i) {
+        cb(<span class="k">static_cast</span>&lt;<span class="t">int</span>&gt;(i), data[i]);
+    }
+}</code></pre>
+
+<pre><code class="lang-py"><span class="c"># 定义回调函数类型: void(*)(int, double)</span>
+<span class="c"># C++ 对比: typedef void(*Callback)(int, double);</span>
+CALLBACK_TYPE = ctypes.CFUNCTYPE(<span class="b">None</span>, ctypes.c_int, ctypes.c_double)
+
+<span class="c"># Python 回调函数</span>
+<span class="k">def</span> <span class="t">my_callback</span>(index, value):
+    <span class="b">print</span>(<span class="s">f"  [{index}] value = {value:.3f}"</span>)
+
+<span class="c"># 包装成 C 可调用的函数指针</span>
+cb = CALLBACK_TYPE(my_callback)
+
+<span class="c"># 准备数据</span>
+data = (ctypes.c_double * <span class="n">4</span>)(<span class="n">1.1</span>, <span class="n">2.2</span>, <span class="n">3.3</span>, <span class="n">4.4</span>)
+
+<span class="c"># 调用 —— C 代码会回调 my_callback</span>
+lib.for_each_value.argtypes = [
+    ctypes.POINTER(ctypes.c_double),
+    ctypes.c_size_t,
+    CALLBACK_TYPE,
+]
+lib.for_each_value.restype = <span class="b">None</span>
+lib.for_each_value(data, <span class="b">len</span>(data), cb)</code></pre>
+
+<div class="warn">
+  <strong>GC 陷阱</strong>: 必须保持 <code>cb</code> 变量在作用域内! 如果 <code>cb</code> 被垃圾回收,
+  C 代码持有的是一个悬空指针, 回调时直接段错误。常见做法是把回调存到模块级变量或对象属性里。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="ctypes-array">7. ctypes 数组与缓冲区</h2>
+
+<h3>7.1 与 numpy 互操作</h3>
+
+<p>在数值计算场景, 你经常需要在 Python 和 C++ 之间传递大数组。ctypes 数组和 numpy 可以零拷贝互转:</p>
+
+<pre><code class="lang-py"><span class="k">import</span> ctypes
+<span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="c"># C 函数: void process_array(double* data, size_t n)</span>
+lib.process_array.argtypes = [ctypes.POINTER(ctypes.c_double), ctypes.c_size_t]
+lib.process_array.restype = <span class="b">None</span>
+
+<span class="c"># 创建 numpy 数组</span>
+arr = np.array([<span class="n">1.0</span>, <span class="n">2.0</span>, <span class="n">3.0</span>, <span class="n">4.0</span>, <span class="n">5.0</span>], dtype=np.float64)
+
+<span class="c"># numpy 数组 → ctypes 指针, 零拷贝!</span>
+ptr = arr.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+
+lib.process_array(ptr, <span class="b">len</span>(arr))
+<span class="c"># arr 被原地修改, numpy 中可以看到结果</span>
+<span class="b">print</span>(arr)</code></pre>
+
+<h3>7.2 用 create_string_buffer 做字节缓冲区</h3>
+
+<pre><code class="lang-py"><span class="c"># C 函数: void fill_buffer(char* buf, size_t size)</span>
+lib.fill_buffer.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
+lib.fill_buffer.restype = <span class="b">None</span>
+
+<span class="c"># 创建 256 字节缓冲区</span>
+buf = ctypes.create_string_buffer(<span class="n">256</span>)
+
+lib.fill_buffer(buf, <span class="b">len</span>(buf))
+
+<span class="c"># 读取结果</span>
+result = buf.value  <span class="c"># bytes, 遇到 \0 截断</span>
+<span class="b">print</span>(result)</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="ctypes-gotcha">8. ctypes 常见坑与陷阱</h2>
+
+<div class="warn">
+  <h4>坑 1: 忘记设 restype 导致返回值被截断</h4>
+  <p>默认 restype 是 <code>c_int</code>。如果函数返回 <code>double</code> 或 <code>uint64</code>,
+  不声明 <code>restype</code> 就会拿到错误结果。<strong>每次都写 argtypes + restype</strong>。</p>
+</div>
+
+<div class="warn">
+  <h4>坑 2: 传 str 给 c_char_p 参数</h4>
+  <p>Python <code>str</code> 是 Unicode, C 的 <code>char*</code> 是字节。必须 <code>.encode()</code> 成 <code>bytes</code>。</p>
+</div>
+
+<div class="warn">
+  <h4>坑 3: 回调被 GC 回收 → 段错误</h4>
+  <p>回调对象必须保持引用, 存到全局变量或对象属性。</p>
+</div>
+
+<div class="warn">
+  <h4>坑 4: 结构体对齐不一致</h4>
+  <p>C++ 编译器可能加 padding, Python 侧默认对齐可能不同。用 <code>_pack_</code> 或
+  <code>_fields_</code> 时用 <code>ctypes.sizeof</code> 验证大小一致。</p>
+</div>
+
+<div class="warn">
+  <h4>坑 5: 调用约定 (cdecl vs stdcall)</h4>
+  <p>Windows 上 Win32 API 用 <code>stdcall</code>, 需要用 <code>ctypes.WinDLL</code> 而非
+  <code>ctypes.CDLL</code>。用错会报 "access violation"。</p>
+</div>
+
+<div class="warn">
+  <h4>坑 6: 64位指针截断</h4>
+  <p>在 64 位系统上, 指针是 8 字节, 但 ctypes 默认 <code>c_int</code> 是 4 字节。处理指针时
+  必须用 <code>c_void_p</code> 或 <code>c_size_t</code>。</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="pybind11-intro">9. pybind11 入门: 编写 C++ 扩展</h2>
+
+<p>pybind11 的核心思想: <strong>在 C++ 源码里写绑定代码, 编译成一个 Python 可 import 的 .pyd / .so</strong>。
+不需要改你的原始 C++ 代码, 只需额外写一个绑定文件。</p>
+
+<h3>9.1 最简单的 pybind11 模块</h3>
+
+<pre><code class="lang-cpp"><span class="c">// example_ext.cpp —— pybind11 扩展模块</span>
+<span class="k">#include</span> <span class="s">&lt;pybind11/pybind11.h&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;string&gt;</span>
+
+<span class="t">int</span> add(<span class="t">int</span> a, <span class="t">int</span> b) {
+    <span class="k">return</span> a + b;
+}
+
+<span class="t">double</span> multiply(<span class="t">double</span> a, <span class="t">double</span> b) {
+    <span class="k">return</span> a * b;
+}
+
+<span class="t">std::string</span> greet(< class="k">const</span> <span class="t">std::string</span>&amp; name) {
+    <span class="k">return</span> <span class="s">"Hello, "</span> + name + <span class="s">"!"</span>;
+}
+
+<span class="c">// 模块定义宏 —— PYBIND11_MODULE(模块名, 变量名)</span>
+<span class="c">// 相当于 Python 的 __init__.py, 在这里注册要暴露的函数/类</span>
+PYBIND11_MODULE(example_ext, m) {
+    m.doc() = <span class="s">"Example pybind11 module"</span>;
+
+    <span class="c">// def("python_name", &cpp_function, "docstring")</span>
+    m.def(<span class="s">"add"</span>, &amp;add, <span class="s">"A function that adds two numbers"</span>);
+    m.def(<span class="s">"multiply"</span>, &amp;multiply, <span class="s">"Multiply two doubles"</span>);
+    m.def(<span class="s">"greet"</span>, &amp;greet, <span class="s">"Greet someone by name"</span>);
+}</code></pre>
+
+<div class="tip">
+  <strong>C++ 对比</strong>: <code>PYBIND11_MODULE</code> 类似于 C++ 里的 <code>__attribute__((visibility("default")))</code>
+  + 手动注册函数表。pybind11 用 C++ 模板元编程在编译时生成了所有类型转换胶水代码, 运行时零开销。
+</div>
+
+<h3>9.2 默认参数与关键字参数</h3>
+
+<pre><code class="lang-cpp"><span class="c">// C++ 函数带默认参数</span>
+<span class="t">int</span> power(<span class="t">int</span> base, <span class="t">int</span> exp = <span class="n">2</span>) {
+    <span class="t">int</span> result = <span class="n">1</span>;
+    <span class="k">for</span> (<span class="t">int</span> i = <span class="n">0</span>; i &lt; exp; ++i)
+        result *= base;
+    <span class="k">return</span> result;
+}
+
+PYBIND11_MODULE(example_ext, m) {
+    <span class="c">// pybind11 自动提取 C++ 默认参数, Python 端也能用 power(3, exp=2)</span>
+    m.def(<span class="s">"power"</span>, &amp;power, pybind11::arg(<span class="s">"base"</span>), pybind11::arg(<span class="s">"exp"</span>) = <span class="n">2</span>);
+
+    <span class="c">// 或者用 py_arg 做更简洁的声明</span>
+    m.def(<span class="s">"power2"</span>, &amp;power,
+          pybind11::arg(<span class="s">"base"</span>), pybind11::arg(<span class="s">"exp"</span>) = <span class="n">2</span>,
+          <span class="s">"Compute base^exp (default exp=2)"</span>);
+}</code></pre>
+
+<pre><code class="lang-py"><span class="c"># Python 端使用</span>
+<span class="k">import</span> example_ext
+
+<span class="b">print</span>(example_ext.power(<span class="n">3</span>))           <span class="c"># 9 (默认 exp=2)</span>
+<span class="b">print</span>(example_ext.power(<span class="n">2</span>, <span class="n">10</span>))         <span class="c"># 1024</span>
+<span class="b">print</span>(example_ext.power(base=<span class="n">5</span>, exp=<span class="n">3</span>))  <span class="c"># 125</span></code></pre>
+
+<!-- ============================================================ -->
+<h2 id="pybind11-build">10. pybind11 编译与安装</h2>
+
+<h3>10.1 用 pip 安装 pybind11</h3>
+
+<pre><code class="lang-shell">pip install pybind11</code></pre>
+
+<h3>10.2 用 CMake 编译 (推荐)</h3>
+
+<pre><code class="lang-cmake"><span class="c"># CMakeLists.txt</span>
+cmake_minimum_required(VERSION 3.15)
+project(example_ext LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+
+<span class="c"># 找到 pybind11</span>
+find_package(pybind11 REQUIRED)
+
+<span class="c"># pybind11_module 会自动处理 Python 扩展的链接和后缀</span>
+pybind11_add_module(example_ext example_ext.cpp)
+
+<span class="c"># 如果有多个源文件</span>
+<span class="c"># pybind11_add_module(example_ext file1.cpp file2.cpp file3.cpp)</span></code></pre>
+
+<pre><code class="lang-shell">mkdir build &amp;&amp; cd build
+cmake .. -DPYBIND11_FINDPYTHON=ON
+cmake --build . --config Release
+
+<span class="c"># 编译完后 .pyd / .so 文件在 build/ 目录</span>
+<span class="c"># 把它放到 Python 能 import 的路径下, 或者在 CMake 里加 install</span></code></pre>
+
+<h3>10.3 用 setuptools 编译 (不依赖 CMake)</h3>
+
+<pre><code class="lang-py"><span class="c"># setup.py</span>
+<span class="k">from</span> setuptools <span class="k">import</span> setup, Extension
+<span class="k">import</span> pybind11
+
+ext = Extension(
+    <span class="s">"example_ext"</span>,
+    [<span class="s">"example_ext.cpp"</span>],
+    include_dirs=[pybind11.get_include()],
+    language=<span class="s">"c++"</span>,
+    extra_compile_args=[<span class="s">"-std=c++17"</span>],
+)
+
+setup(
+    name=<span class="s">"example_ext"</span>,
+    ext_modules=[ext],
+)</code></pre>
+
+<pre><code class="lang-shell">python setup.py build_ext --inplace</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="pybind11-class">11. pybind11 绑定 C++ 类</h2>
+
+<p>这是 pybind11 真正强大的地方 —— 可以把整个 C++ 类暴露给 Python, 包括构造函数、成员函数、成员变量。</p>
+
+<pre><code class="lang-cpp"><span class="c">// vec3.h —— 你的 C++ 类</span>
+<span class="k">#include</span> <span class="s">&lt;cmath&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;string&gt;</span>
+
+<span class="k">class</span> Vec3 {
+<span class="k">public</span>:
+    <span class="t">double</span> x, y, z;
+
+    <span class="c">// 构造函数</span>
+    Vec3() : x(<span class="n">0</span>), y(<span class="n">0</span>), z(<span class="n">0</span>) {}
+    Vec3(<span class="t">double</span> x_, <span class="t">double</span> y_, <span class="t">double</span> z_) : x(x_), y(y_), z(z_) {}
+
+    <span class="c">// 成员函数</span>
+    <span class="t">double</span> dot(<span class="k">const</span> Vec3&amp; other) <span class="k">const</span> {
+        <span class="k">return</span> x * other.x + y * other.y + z * other.z;
+    }
+
+    <span class="t">double</span> length() <span class="k">const</span> {
+        <span class="k">return</span> std::sqrt(dot(*<span class="k">this</span>));
+    }
+
+    Vec3 operator+<span class="k">const</span> Vec3&amp; other) <span class="k">const</span> {
+        <span class="k">return</span> Vec3(x + other.x, y + other.y, z + other.z);
+    }
+
+    <span class="t">std::string</span> toString() <span class="k">const</span> {
+        <span class="k">return</span> <span class="s">"Vec3("</span> + std::to_string(x) + <span class="s">", "</span>
+             + std::to_string(y) + <span class="s">", "</span>
+             + std::to_string(z) + <span class="s">")"</span>;
+    }
+};</code></pre>
+
+<pre><code class="lang-cpp"><span class="c">// vec3_bind.cpp —— pybind11 绑定</span>
+<span class="k">#include</span> <span class="s">&lt;pybind11/pybind11.h&gt;</span>
+<span class="k">#include</span> <span class="s">"vec3.h"</span>
+
+<span class="k">namespace</span> py = pybind11;
+
+PYBIND11_MODULE(vec3_ext, m) {
+    m.doc() = <span class="s">"Vec3 C++ extension"</span>;
+
+    <span class="c">// 绑定类: py::class_&lt;CppClass&gt;(module, "PythonName")</span>
+    py::class_&lt;Vec3&gt;(m, <span class="s">"Vec3"</span>)
+        <span class="c">// 构造函数: 多个 init 重载</span>
+        .def(py::init&lt;&gt;())                              <span class="c">// Vec3()</span>
+        .def(py::init&lt;<span class="t">double</span>, <span class="t">double</span>, <span class="t">double</span>&gt;())     <span class="c">// Vec3(x, y, z)</span>
+
+        <span class="c">// 成员变量: 直接读写</span>
+        .def_readwrite(<span class="s">"x"</span>, &amp;Vec3::x)
+        .def_readwrite(<span class="s">"y"</span>, &amp;Vec3::y)
+        .def_readwrite(<span class="s">"z"</span>, &amp;Vec3::z)
+
+        <span class="c">// 成员函数</span>
+        .def(<span class="s">"dot"</span>, &amp;Vec3::dot, <span class="s">"Dot product"</span>)
+        .def(<span class="s">"length"</span>, &amp;Vec3::length, <span class="s">"Vector length"</span>)
+        .def(<span class="s">"toString"</span>, &amp;Vec3::toString, <span class="s">"String representation"</span>)
+
+        <span class="c">// 运算符重载</span>
+        .def(py::self + py::self)  <span class="c">// operator+</span>
+
+        <span class="c">// __repr__ —— 让 Python print 输出友好</span>
+        .def(<span class="s">"__repr__"</span>, &amp;Vec3::toString);
+}</code></pre>
+
+<pre><code class="lang-py"><span class="k">import</span> vec3_ext
+
+<span class="c"># 构造</span>
+v1 = vec3_ext.Vec3(<span class="n">1.0</span>, <span class="n">2.0</span>, <span class="n">3.0</span>)
+v2 = vec3_ext.Vec3(<span class="n">4.0</span>, <span class="n">5.0</span>, <span class="n">6.0</span>)
+
+<span class="c"># 读写成员变量</span>
+<span class="b">print</span>(v1.x)  <span class="c"># 1.0</span>
+v1.z = <span class="n">10.0</span>
+
+<span class="c"># 调用成员函数</span>
+<span class="b">print</span>(v1.dot(v2))     <span class="c"># 1*4 + 2*5 + 10*6 = 74</span>
+<span class="b">print</span>(v1.length())      <span class="c"># sqrt(1 + 4 + 100) ≈ 10.247</span>
+
+<span class="c"># 运算符重载</span>
+v3 = v1 + v2             <span class="c"># operator+</span>
+<span class="b">print</span>(v3)               <span class="c"># __repr__ → "Vec3(5, 7, 16)"</span></code></pre>
+
+<!-- ============================================================ -->
+<h2 id="pybind11-stl">12. pybind11 自动转换 STL 容器</h2>
+
+<p>pybind11 内置了 STL 容器的自动转换, 这是 ctypes 做不到的:</p>
+
+<pre><code class="lang-cpp"><span class="c">// C++ 函数: 接受和返回 STL 容器</span>
+<span class="k">#include</span> <span class="s">&lt;vector&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;string&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;map&gt;</span>
+
+<span class="t">std::vector</span>&lt;<span class="t">double</span>&gt; scale_vector(
+    <span class="k">const</span> <span class="t">std::vector</span>&lt;<span class="t">double</span>&gt;&amp; input, <span class="t">double</span> factor) {
+    <span class="t">std::vector</span>&lt;<span class="t">double</span>&gt; result;
+    result.reserve(input.size());
+    <span class="k">for</span> (<span class="t">double</span> v : input)
+        result.push_back(v * factor);
+    <span class="k">return</span> result;
+}
+
+<span class="t">std::map</span>&lt;<span class="t">std::string</span>, <span class="t">int</span>&gt; word_count(
+    <span class="k">const</span> <span class="t">std::vector</span>&lt;<span class="t">std::string</span>&gt;&amp; words) {
+    <span class="t">std::map</span>&lt;<span class="t">std::string</span>, <span class="t">int</span>&gt; counts;
+    <span class="k">for</span> (<span class="k">const</span> <span class="t">auto</span>&amp; w : words)
+        counts[w]++;
+    <span class="k">return</span> counts;
+}</code></pre>
+
+<pre><code class="lang-cpp"><span class="c">// 绑定 —— 需要包含 stl.h 头文件!</span>
+<span class="k">#include</span> <span class="s">&lt;pybind11/stl.h&gt;</span>  <span class="c">// 启用 STL 自动转换</span>
+
+PYBIND11_MODULE(stl_ext, m) {
+    m.def(<span class="s">"scale_vector"</span>, &amp;scale_vector);
+    m.def(<span class="s">"word_count"</span>, &amp;word_count);
+}</code></pre>
+
+<pre><code class="lang-py"><span class="k">import</span> stl_ext
+
+<span class="c"># Python list → C++ std::vector, 返回 → Python list</span>
+result = stl_ext.scale_vector([<span class="n">1.0</span>, <span class="n">2.0</span>, <span class="n">3.0</span>], <span class="n">10.0</span>)
+<span class="b">print</span>(result)  <span class="c"># [10.0, 20.0, 30.0]</span>
+
+<span class="c"># Python list[str] → C++ std::vector<std::string></span>
+<span class="c"># 返回 std::map<std::string, int> → Python dict</span>
+counts = stl_ext.word_count([<span class="s">"hello"</span>, <span class="s">"world"</span>, <span class="s">"hello"</span>, <span class="s">"python"</span>])
+<span class="b">print</span>(counts)  <span class="c"># {'hello': 2, 'world': 1, 'python': 1}</span></code></pre>
+
+<div class="tip">
+  <strong>注意</strong>: STL 自动转换涉及拷贝 (Python 对象 → C++ 对象 → 返回时再拷贝回来)。
+  对于大数组, 用 <code>py::array_t&lt;double&gt;</code> (numpy 接口) 做零拷贝更高效, 后面会讲。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="pybind11-callback">13. pybind11 回调与 lambda</h2>
+
+<p>pybind11 可以接受 Python 函数作为 C++ 回调, 不需要像 ctypes 那样手动管理函数指针:</p>
+
+<pre><code class="lang-cpp"><span class="k">#include</span> <span class="s">&lt;pybind11/functional.h&gt;</span>  <span class="c">// 回调支持</span>
+<span class="k">#include</span> <span class="s">&lt;functional&gt;</span>
+
+<span class="c">// C++ 接受 std::function 回调</span>
+<span class="t">void</span> for_each_value(<span class="k">const</span> <span class="t">std::vector</span>&lt;<span class="t">double</span>&gt;&amp; data,
+                     <span class="k">const</span> <span class="t">std::function</span>&lt;<span class="t">void</span>(<span class="t">size_t</span>, <span class="t">double</span>)&gt;&amp; callback) {
+    <span class="k">for</span> (<span class="t">size_t</span> i = <span class="n">0</span>; i &lt; data.size(); ++i) {
+        callback(i, data[i]);
+    }
+}
+
+<span class="c">// C++ 返回 lambda 给 Python</span>
+<span class="t">std::function</span>&lt;<span class="t">int</span>(<span class="t">int</span>)&gt; make_multiplier(<span class="t">int</span> factor) {
+    <span class="k">return</span> [factor](<span class="t">int</span> x) { <span class="k">return</span> x * factor; };
+}
+
+PYBIND11_MODULE(callback_ext, m) {
+    m.def(<span class="s">"for_each_value"</span>, &amp;for_each_value);
+    m.def(<span class="s">"make_multiplier"</span>, &amp;make_multiplier);
+}</code></pre>
+
+<pre><code class="lang-py"><span class="k">import</span> callback_ext
+
+<span class="c"># 传 Python 函数作为回调 —— 自动转 std::function</span>
+<span class="k">def</span> <span class="t">my_callback</span>(index, value):
+    <span class="b">print</span>(<span class="s">f"  [{index}] = {value:.3f}"</span>)
+
+callback_ext.for_each_value([<span class="n">1.1</span>, <span class="n">2.2</span>, <span class="n">3.3</span>], my_callback)
+
+<span class="c"># 传 lambda 也行</span>
+callback_ext.for_each_value([<span class="n">4.4</span>, <span class="n">5.5</span>], <span class="k">lambda</span> i, v: <span class="b">print</span>(<span class="s">f"  item {i}: {v}"</span>))
+
+<span class="c"># 从 C++ 拿回一个 lambda, 在 Python 里调用</span>
+doubler = callback_ext.make_multiplier(<span class="n">2</span>)
+<span class="b">print</span>(doubler(<span class="n">21</span>))  <span class="c"># 42</span></code></pre>
+
+<!-- ============================================================ -->
+<h2 id="pybind11-exception">14. pybind11 异常透传</h2>
+
+<p>ctypes 无法处理 C++ 异常 (直接 abort), 而 pybind11 可以自动把 C++ 异常转成 Python 异常:</p>
+
+<pre><code class="lang-cpp"><span class="k">#include</span> <span class="s">&lt;stdexcept&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;vector&gt;</span>
+
+<span class="t">double</span> safe_divide(<span class="t">double</span> a, <span class="t">double</span> b) {
+    <span class="k">if</span> (b == <span class="n">0.0</span>)
+        <span class="k">throw</span> <span class="t">std::invalid_argument</span>(<span class="s">"Division by zero"</span>);
+    <span class="k">return</span> a / b;
+}
+
+<span class="t">double</span> get_element(<span class="k">const</span> <span class="t">std::vector</span>&lt;<span class="t">double</span>&gt;&amp; v, <span class="t">size_t</span> i) {
+    <span class="k">if</span> (i &gt;= v.size())
+        <span class="k">throw</span> <span class="t">std::out_of_range</span>(<span class="s">"Index out of range"</span>);
+    <span class="k">return</span> v[i];
+}
+
+<span class="c">// 自定义异常类</span>
+<span class="k">class</span> MathError : <span class="k">public</span> <span class="t">std::runtime_error</span> {
+<span class="k">public</span>:
+    <span class="k">explicit</span> MathError(<span class="k">const</span> <span class="t">std::string</span>&amp; msg)
+        : <span class="t">std::runtime_error</span>(msg) {}
+};
+
+<span class="t">double</span> sqrt_safe(<span class="t">double</span> x) {
+    <span class="k">if</span> (x &lt; <span class="n">0</span>)
+        <span class="k">throw</span> <span class="t">MathError</span>(<span class="s">"Cannot sqrt negative number"</span>);
+    <span class="k">return</span> std::sqrt(x);
+}
+
+PYBIND11_MODULE(exception_ext, m) {
+    m.def(<span class="s">"safe_divide"</span>, &amp;safe_divide);
+    m.def(<span class="s">"get_element"</span>, &amp;get_element);
+    m.def(<span class="s">"sqrt_safe"</span>, &amp;sqrt_safe);
+
+    <span class="c">// 注册自定义异常, 让 Python 端可以 except MathError</span>
+    py::register_exception&lt;MathError&gt;(m, <span class="s">"MathError"</span>);
+}</code></pre>
+
+<pre><code class="lang-py"><span class="k">import</span> exception_ext
+
+<span class="c"># C++ std::invalid_argument → Python ValueError</span>
+<span class="k">try</span>:
+    exception_ext.safe_divide(<span class="n">1.0</span>, <span class="n">0.0</span>)
+<span class="k">except</span> ValueError <span class="k">as</span> e:
+    <span class="b">print</span>(<span class="s">f"Caught: {e}"</span>)  <span class="c"># Division by zero</span>
+
+<span class="c"># C++ std::out_of_range → Python IndexError</span>
+<span class="k">try</span>:
+    exception_ext.get_element([<span class="n">1.0</span>, <span class="n">2.0</span>], <span class="n">10</span>)
+<span class="k">except</span> IndexError <span class="k">as</span> e:
+    <span class="b">print</span>(<span class="s">f"Caught: {e}"</span>)
+
+<span class="c"># 自定义异常</span>
+<span class="k">try</span>:
+    exception_ext.sqrt_safe(-<span class="n">1.0</span>)
+<span class="k">except</span> exception_ext.MathError <span class="k">as</span> e:
+    <span class="b">print</span>(<span class="s">f"Caught MathError: {e}"</span>)</code></pre>
+
+<table>
+  <tr><th>C++ 异常</th><th>Python 异常</th></tr>
+  <tr><td>std::runtime_error</td><td>RuntimeError</td></tr>
+  <tr><td>std::invalid_argument</td><td>ValueError</td></tr>
+  <tr><td>std::out_of_range</td><td>IndexError</td></tr>
+  <tr><td>std::bad_alloc</td><td>MemoryError</td></tr>
+  <tr><td>std::exception (其他)</td><td>RuntimeError</td></tr>
+  <tr><td>自定义 (register_exception)</td><td>你注册的异常类</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="pybind11-numpy">15. pybind11 + numpy: 高性能数值计算</h2>
+
+<p>这是 pybind11 最实用的功能之一 —— 让 C++ 直接操作 numpy 数组内存, 零拷贝:</p>
+
+<pre><code class="lang-cpp"><span class="k">#include</span> <span class="s">&lt;pybind11/pybind11.h&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;pybind11/numpy.h&gt;</span>  <span class="c">// numpy 支持</span>
+
+<span class="k">namespace</span> py = pybind11;
+
+<span class="c">// 接受 numpy 数组, 返回 numpy 数组</span>
+<span class="c">// py::array_t&lt;double&gt; 是 C++ 端的 numpy double 数组包装</span>
+py::array_t&lt;<span class="t">double</span>&gt; vector_add(
+    py::array_t&lt;<span class="t">double</span>&gt; a,
+    py::array_t&lt;<span class="t">double</span>&gt; b
+) {
+    <span class="c">// 获取数组信息 (不拷贝)</span>
+    <span class="t">auto</span> buf_a = a.request();
+    <span class="t">auto</span> buf_b = b.request();
+
+    <span class="k">if</span> (buf_a.size != buf_b.size)
+        <span class="k">throw</span> <span class="t">std::runtime_error</span>(<span class="s">"Shape mismatch"</span>);
+
+    <span class="c">// 创建结果数组</span>
+    <span class="t">auto</span> result = py::array_t&lt;<span class="t">double</span>&gt;(buf_a.size);
+    <span class="t">auto</span> buf_r = result.request();
+
+    <span class="c">// 获取原始指针 —— 零拷贝直接访问 numpy 内存</span>
+    <span class="t">double</span>* ptr_a = <span class="k">static_cast</span>&lt;<span class="t">double</span>*&gt;(buf_a.ptr);
+    <span class="t">double</span>* ptr_b = <span class="k">static_cast</span>&lt;<span class="t">double</span>*&gt;(buf_b.ptr);
+    <span class="t">double</span>* ptr_r = <span class="k">static_cast</span>&lt;<span class="t">double</span>*&gt;(buf_r.ptr);
+
+    <span class="c">// 真正的计算 —— 可以用 SIMD / OpenMP 优化</span>
+    <span class="k">for</span> (<span class="t">size_t</span> i = <span class="n">0</span>; i &lt; buf_a.size; ++i) {
+        ptr_r[i] = ptr_a[i] + ptr_b[i];
+    }
+
+    <span class="k">return</span> result;
+}
+
+<span class="c">// 原地修改 numpy 数组 —— 不创建新数组, 直接改传入的内存</span>
+<span class="t">void</span> scale_inplace(py::array_t&lt;<span class="t">double</span>&gt; arr, <span class="t">double</span> factor) {
+    <span class="t">auto</span> buf = arr.request();
+    <span class="t">double</span>* ptr = <span class="k">static_cast</span>&lt;<span class="t">double</span>*&gt;(buf.ptr);
+    <span class="k">for</span> (<span class="t">size_t</span> i = <span class="n">0</span>; i &lt; buf.size; ++i) {
+        ptr[i] *= factor;
+    }
+}
+
+PYBIND11_MODULE(numpy_ext, m) {
+    m.def(<span class="s">"vector_add"</span>, &amp;vector_add);
+    m.def(<span class="s">"scale_inplace"</span>, &amp;scale_inplace);
+}</code></pre>
+
+<pre><code class="lang-py"><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> numpy_ext
+
+a = np.array([<span class="n">1.0</span>, <span class="n">2.0</span>, <span class="n">3.0</span>], dtype=np.float64)
+b = np.array([<span class="n">10.0</span>, <span class="n">20.0</span>, <span class="n">30.0</span>], dtype=np.float64)
+
+<span class="c"># 零拷贝传递给 C++</span>
+c = numpy_ext.vector_add(a, b)
+<span class="b">print</span>(c)  <span class="c"># [11. 22. 33.]</span>
+
+<span class="c"># 原地修改 —— a 数组直接被改</span>
+numpy_ext.scale_inplace(a, <span class="n">100.0</span>)
+<span class="b">print</span>(a)  <span class="c"># [100. 200. 300.]</span></code></pre>
+
+<div class="tip">
+  <strong>性能对比</strong>: 对于 100 万元素的数组加法, 纯 Python 循环约 300ms, numpy 约 2ms,
+  pybind11+numpy 零拷贝约 1ms。C++ 的优势在于你可以在循环里用 AVX 指令或 OpenMP 并行加速。
+</div>
+
+<!-- ============================================================ -->
+<h2 id="comparison">16. ctypes vs pybind11 完整对比</h2>
+
+<table>
+  <tr>
+    <th>维度</th>
+    <th>ctypes</th>
+    <th>pybind11</th>
+  </tr>
+  <tr>
+    <td>学习曲线</td>
+    <td>低 —— 标准库, 无编译</td>
+    <td>中 —— 需学 C++ 模板和 CMake</td>
+  </tr>
+  <tr>
+    <td>开发效率</td>
+    <td>低 —— 手动写类型映射</td>
+    <td>高 —— 一行 def 搞定</td>
+  </tr>
+  <tr>
+    <td>运行性能</td>
+    <td>中等 (每次调用做动态检查)</td>
+    <td>高 (编译时生成)</td>
+  </tr>
+  <tr>
+    <td>C++ 类/模板</td>
+    <td>❌</td>
+    <td>✅</td>
+  </tr>
+  <tr>
+    <td>STL 自动转换</td>
+    <td>❌</td>
+    <td>✅</td>
+  </tr>
+  <tr>
+    <td>异常透传</td>
+    <td>❌</td>
+    <td>✅</td>
+  </tr>
+  <tr>
+    <td>numpy 零拷贝</td>
+    <td>需手动 .ctypes.data_as</td>
+    <td>✅ 原生 py::array_t</td>
+  </tr>
+  <tr>
+    <td>跨平台</td>
+    <td>好 (Python 处理)</td>
+    <td>需注意编译器/CMake</td>
+  </tr>
+  <tr>
+    <td>不需要 C++ 源码</td>
+    <td>✅ 只要 .dll/.so</td>
+    <td>❌ 需源码重新编译</td>
+  </tr>
+  <tr>
+    <td>调用现成 C 库</td>
+    <td>✅ 最佳选择</td>
+    <td>需写 wrapper C++ 源码</td>
+  </tr>
+</table>
+
+<div class="info">
+  <strong>实际建议</strong>:
+  <ul>
+    <li>调用 <strong>libc / Win32 API / OpenSSL / SQLite</strong> → 用 <code>ctypes</code></li>
+    <li>为<strong>自己的 C++ 项目写 Python 绑定</strong> → 用 <code>pybind11</code></li>
+    <li><strong>快速原型</strong>验证一个 C 函数 → 用 <code>ctypes</code> (快, 不用编译)</li>
+    <li><strong>长期维护</strong>的 Python 绑定 → 用 <code>pybind11</code> (类型安全, 可维护)</li>
+  </ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="tool">17. 实战工具: C++ 库函数签名扫描器</h2>
+
+<p>当你拿到一个 C++ 编译的 .dll/.so, 想用 ctypes 调用但不知道导出了哪些函数时, 这个工具帮你自动扫描:</p>
+
+<pre><code class="lang-shell"><span class="c"># 扫描 .dll 导出的函数列表</span>
+python dll_signature_scanner.py --dll math_lib.dll
+
+<span class="c"># 扫描 .so 文件</span>
+python dll_signature_scanner.py --so libmath_lib.so</code></pre>
+
+<p>详见同目录下的 <code>dll_signature_scanner.py</code>。</p>
+
+<!-- ============================================================ -->
+<h2 id="summary">18. 小结与练习</h2>
+
+<h3>今日核心知识点</h3>
+
+<table>
+  <tr><th>知识点</th><th>ctypes</th><th>pybind11</th></tr>
+  <tr><td>加载库</td><td>CDLL / WinDLL</td><td>编译成 .pyd</td></tr>
+  <tr><td>类型映射</td><td>c_int, c_double, c_char_p...</td><td>自动 (模板推导)</td></tr>
+  <tr><td>结构体</td><td>Structure + _fields_</td><td>py::class_ 绑定</td></tr>
+  <tr><td>指针</td><td>POINTER(T), byref()</td><td>引用自动转换</td></tr>
+  <tr><td>回调</td><td>CFUNCTYPE (注意 GC)</td><td>std::function (自动)</td></tr>
+  <tr><td>异常</td><td>❌ 段错误</td><td>✅ 自动映射</td></tr>
+  <tr><td>STL</td><td>❌ 手动</td><td>✅ 自动</td></tr>
+  <tr><td>numpy</td><td>data_as 指针</td><td>py::array_t 零拷贝</td></tr>
+</table>
+
+<h3>练习题</h3>
+<ol>
+  <li>用 ctypes 调用 Windows 的 <code>MessageBoxW</code> (user32.dll), 弹出一个对话框</li>
+  <li>用 ctypes 调用 <code>libc</code> 的 <code>qsort</code>, 排序一个 int 数组, 传入 Python 比较回调</li>
+  <li>写一个 C++ 的 <code>Matrix</code> 类 (2D double 数组), 用 pybind11 绑定到 Python, 支持乘法和转置</li>
+  <li>用 pybind11 + numpy 写一个 <code>fast_convolve</code> 函数, 在 C++ 里做 1D 卷积</li>
+  <li>写一个 pybind11 模块, 接受 Python <code>callable</code>, 在 C++ 里调用它 N 次, 测量调用开销</li>
+</ol>
+
+<div class="info">
+  <strong>下一天预告</strong>: Day 09 将学习 <strong>C++ 项目自动化</strong> —— 用 Python 辅助 CMake
+  配置生成、批量编译多目标、解析编译器输出做智能诊断。今天学的 ctypes/pybind11 会作为底层能力被整合进来。
+</div>
+
+</body>
+</html>
