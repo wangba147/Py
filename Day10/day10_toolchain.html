@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 10 — 综合实战：C++ 项目工具链</title>
+<style>
+:root{--bg:#0f1117;--surface:#161822;--card:#1c1f2e;--border:#2a2d3e;--fg:#e4e6f0;--muted:#8b8fa3;--accent:#4fc3f7;--accent2:#7c4dff;--green:#66bb6a;--orange:#ffa726;--yellow:#ffee58;--red:#ef5350;--code-bg:#12131a;--py-color:#ffee58;--cpp-color:#4fc3f7}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--fg);line-height:1.8}
+.hero{background:linear-gradient(135deg,#1a1c2e 0%,#0f1117 50%,#12131f 100%);border-bottom:1px solid var(--border);padding:56px 24px 40px;text-align:center;position:relative}
+.hero::before{content:'';position:absolute;top:-60px;left:-60px;width:240px;height:240px;background:radial-gradient(circle,rgba(79,195,247,0.08) 0%,transparent 70%)}
+.hero::after{content:'';position:absolute;bottom:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,77,255,0.1) 0%,transparent 70%)}
+.hero .badge{display:inline-block;background:rgba(255,238,88,0.15);border:1px solid rgba(255,238,88,0.4);color:var(--yellow);font-size:11px;font-weight:700;letter-spacing:1.5px;padding:4px 14px;border-radius:20px;margin-bottom:14px}
+.hero h1{font-size:clamp(28px,5vw,44px);font-weight:800;color:#fff;line-height:1.15;margin-bottom:12px}
+.hero h1 .py{color:var(--py-color)}.hero h1 .cpp{color:var(--cpp-color)}
+.hero p{color:var(--muted);font-size:15px;max-width:540px;margin:0 auto}
+.container{max-width:860px;margin:0 auto;padding:40px 24px 80px}
+h2{font-size:22px;color:#fff;margin:36px 0 16px;border-bottom:1px solid var(--border);padding-bottom:8px}
+h3{font-size:17px;color:var(--accent);margin:24px 0 12px}
+h4{font-size:15px;color:var(--fg);margin:16px 0 8px}
+p{margin-bottom:14px}
+.code-block{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:20px;margin:16px 0;overflow-x:auto;font-size:13px;line-height:1.7}
+.code-block .lang-label{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.code-block .lang-label .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.cpp-label .dot{background:var(--cpp-color)}.py-label .dot{background:var(--py-color)}
+.cpp-label{color:var(--cpp-color)}.py-label{color:var(--py-color)}
+pre{margin:0;white-space:pre;font-family:'Fira Code','Consolas','Microsoft YaHei Mono',monospace}
+.comment{color:#6a6d83}.keyword{color:#c792ea}.string{color:#c3e88d}.number{color:#f78c6c}.type{color:#ffcb6b}.func{color:#82aaff}.decorator{color:#f07178}.builtin{color:#89ddff}
+.tip{background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.2);border-radius:10px;padding:16px 20px;margin:16px 0}
+.tip::before{content:'💡 ';color:var(--accent)}
+.warn{background:rgba(255,167,38,0.08);border:1px solid rgba(255,167,38,0.2);border-radius:10px;padding:16px 20px;margin:16px 0}
+.warn::before{content:'⚠️ ';color:var(--orange)}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.compare .cpp-side,.compare .py-side{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto}
+.compare .side-label{font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.cpp-side .side-label{color:var(--cpp-color)}.py-side .side-label{color:var(--py-color)}
+.cpp-side .side-label .dot,.py-side .side-label .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.cpp-side .side-label .dot{background:var(--cpp-color)}.py-side .side-label .dot{background:var(--py-color)}
+.nav-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 20px;margin:24px 0;display:flex;justify-content:space-between;align-items:center}
+.nav-bar a{color:var(--accent);font-size:14px;text-decoration:none;font-weight:600}
+.nav-bar a:hover{text-decoration:underline}
+.chapters{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin:20px 0}
+.chapters h3{margin-bottom:12px;color:var(--fg);font-size:16px}
+.chapter-list{display:grid;gap:8px}
+.chapter-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border-radius:6px;cursor:pointer;font-size:14px;color:var(--fg)}
+.chapter-item:hover{background:rgba(79,195,247,0.08);color:var(--accent)}
+.chapter-num{width:24px;height:24px;border-radius:6px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted)}
+.chapter-item:hover .chapter-num{background:rgba(79,195,247,0.15);color:var(--accent)}
+.topic-tag{font-size:11px;background:rgba(255,238,88,0.1);color:var(--yellow);border:1px solid rgba(255,238,88,0.25);padding:1px 8px;border-radius:12px;margin-left:auto}
+.topic-tag.cpp{background:rgba(79,195,247,0.1);color:var(--accent);border-color:rgba(79,195,247,0.25)}
+.summary-box{background:linear-gradient(135deg,#161822,#1c1f2e);border:1px solid var(--border);border-radius:14px;padding:28px 32px;margin:36px 0;text-align:center}
+.summary-box h2{color:var(--yellow);font-size:24px;margin-bottom:10px;border:none;padding:0}
+.summary-box p{color:var(--muted);font-size:15px}
+.footer{text-align:center;padding:32px 24px;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th{background:var(--surface);color:var(--muted);font-size:12px;text-align:left;padding:8px 14px;border-bottom:2px solid var(--border)}
+td{padding:8px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.highlight{color:var(--accent);font-weight:600}
+.green-h{color:var(--green)}.red-h{color:var(--red)}.orange-h{color:var(--orange)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+<div class="badge">DAY 10 · FINAL 🎉</div>
+<h1>综合实战：C++ <span class="cpp">项目工具链</span></h1>
+<p>10 天学习旅程的终点站 —— 把所有 Python 技能串成一条完整工具链，让 C++ 开发真正高效</p>
+</div>
+
+<div class="container">
+
+<div class="nav-bar">
+<a href="../index.html">← 返回目录</a>
+<span style="color:var(--muted);font-size:13px">Day 10 / 10</span>
+<a href="../Day09/day09_cpp_automation.html">Day 09 →</a>
+</div>
+
+<div class="chapters">
+<h3>📖 本章内容</h3>
+<div class="chapter-list">
+<div class="chapter-item" onclick="scrollTo('s1')"><div class="chapter-num">1</div>为什么需要工具链<div class="topic-tag cpp">C++痛点</div></div>
+<div class="chapter-item" onclick="scrollTo('s2')"><div class="chapter-num">2</div>项目脚手架自动生成<div class="topic-tag">Scaffold</div></div>
+<div class="chapter-item" onclick="scrollTo('s3')"><div class="chapter-num">3</div>代码度量分析<div class="topic-tag">Metrics</div></div>
+<div class="chapter-item" onclick="scrollTo('s4')"><div class="chapter-num">4</div>构建日志解析<div class="topic-tag">Parser</div></div>
+<div class="chapter-item" onclick="scrollTo('s5')"><div class="chapter-num">5</div>数据驱动的代码生成<div class="topic-tag">CodeGen</div></div>
+<div class="chapter-item" onclick="scrollTo('s6')"><div class="chapter-num">6</div>配置驱动的增量构建<div class="topic-tag">Build</div></div>
+<div class="chapter-item" onclick="scrollTo('s7')"><div class="chapter-num">7</div>文件变更检测（哈希追踪）<div class="topic-tag cpp">hashlib</div></div>
+<div class="chapter-item" onclick="scrollTo('s8')"><div class="chapter-num">8</div>测试发现与自动运行<div class="topic-tag">Testing</div></div>
+<div class="chapter-item" onclick="scrollTo('s9')"><div class="chapter-num">9</div>HTML 报告生成<div class="topic-tag">Report</div></div>
+<div class="chapter-item" onclick="scrollTo('s10')"><div class="chapter-num">10</div>完整工具链集成<div class="topic-tag cpp">CLI</div></div>
+<div class="chapter-item" onclick="scrollTo('s11')"><div class="chapter-num">11</div>10 天回顾与进阶方向<div class="topic-tag">Summary</div></div>
+</div>
+</div>
+
+<!-- ==================== Section 1 ==================== -->
+<h2 id="s1">1. 为什么 C++ 开发者需要 Python 工具链？</h2>
+
+<p>C++ 项目开发中有大量<span class="highlight">重复性、机械性</span>的工作，这些任务用 C++ 做成本高、收益低：</p>
+
+<table>
+<tr><th>C++ 开发痛点</th><th>Python 解决方式</th><th>学习来源</th></tr>
+<tr><td>手动创建项目结构</td><td>一键生成脚手架</td><td>Day 03 pathlib + Day 05 Template</td></tr>
+<tr><td>逐行查找编译错误</td><td>自动解析+分类+统计</td><td>Day 06 正则 + Day 03 文件IO</td></tr>
+<tr><td>手写每个 getter/setter</td><td>JSON 规范 → 自动生成类</td><td>Day 05 json + Template</td></tr>
+<tr><td>CMake 手写构建规则</td><td>JSON 配置 → 动态构建</td><td>Day 07 subprocess + Day 09 CMake</td></tr>
+<tr><td>手动判断哪些文件需要重新编译</td><td>哈希对比 → 精确增量构建</td><td>Day 05 hashlib</td></tr>
+<tr><td>逐个注册 CTest 测试</td><td>glob 自动发现 → 一键运行</td><td>Day 05 glob + dataclass</td></tr>
+<tr><td>编译日志看不出整体趋势</td><td>HTML 报告一键生成</td><td>Day 03 HTML + Day 05 json</td></tr>
+</table>
+
+<div class="tip">
+<strong>核心思路</strong>：C++ 负责"高性能计算"，Python 负责"自动化 + 数据处理 + 代码生成"。两种语言各司其职，Python 做的是<strong>C++ 不擅长但必须做</strong>的事。
+</div>
+
+<!-- ==================== Section 2 ==================== -->
+<h2 id="s2">2. 项目脚手架自动生成</h2>
+
+<p>每次新建 C++ 项目，都要创建一堆目录和模板文件。Python 用 <code>pathlib</code> + <code>string.Template</code> 一键搞定。</p>
+
+<div class="compare">
+<div class="cpp-side">
+<div class="side-label"><span class="dot"></span>C++ 手动方式</div>
+<pre><span class="comment">// 手动 mkdir、touch、编写 CMakeLists.txt</span>
+<span class="comment">// 每个项目重复相同的创建流程</span>
+<span class="comment">// 需要记住每个模板格式</span>
+
+<span class="comment">// 典型项目结构：</span>
+project/
+├── src/main.cpp      <span class="comment">// 手写</span>
+├── include/project.h <span class="comment">// 手写</span>
+├── tests/            <span class="comment">// 手建</span>
+├── CMakeLists.txt    <span class="comment">// 手写</span>
+├── .gitignore        <span class="comment">// 手写</span>
+└── README.md         <span class="comment">// 手写</span></pre>
+</div>
+<div class="py-side">
+<div class="side-label"><span class="dot"></span>Python 自动生成</div>
+<pre><span class="keyword">from</span> pathlib <span class="keyword">import</span> Path
+<span class="keyword">from</span> string <span class="keyword">import</span> Template
+
+<span class="comment"># 用 Template 定义模板</span>
+cmake_tpl = Template(<span class="string">"""
+cmake_minimum_required(VERSION 3.16)
+project($name VERSION $version LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD $cxx_std)
+"""</span>)
+
+<span class="comment"># 一键创建目录结构</span>
+dirs = [<span class="string">"src"</span>, <span class="string">"include"</span>, <span class="string">"tests"</span>, <span class="string">"docs"</span>]
+<span class="keyword">for</span> d <span class="keyword">in</span> dirs:
+    Path(project_dir / d).mkdir(parents=<span class="builtin">True</span>)
+
+<span class="comment"># 模板填充 → 生成文件</span>
+(Path(project_dir / <span class="string">"CMakeLists.txt"</span>)
+ .write_text(cmake_tpl.substitute(
+     name=<span class="string">"my_project"</span>,
+     version=<span class="string">"0.1.0"</span>,
+     cxx_std=<span class="string">"17"</span>)))</pre>
+</div>
+</div>
+
+<h3>关键要点</h3>
+<p><strong>Template vs f-string</strong>：模板中的 <code>$name</code> 不会意外被 Python 变量替换，比 f-string 更安全（尤其是生成 C++ 代码时 <code>${SOURCES}</code> 是 CMake 变量，不是 Python 变量）。</p>
+
+<p><strong>pathlib vs os</strong>：Day 03 学过的 <code>pathlib.Path</code> 比 <code>os.path</code> 更直观——<code>Path("/src") / "main.cpp"</code> vs <code>os.path.join("/src", "main.cpp")</code>。</p>
+
+<div class="warn">
+注意 <code>Template.safe_substitute()</code>：未匹配的 <code>$var</code> 会保留原样（不报错），适合生成 C++ 代码模板。而 <code>Template.substitute()</code> 遇到未定义变量会抛 <code>KeyError</code>。
+</div>
+
+<!-- ==================== Section 3 ==================== -->
+<h2 id="s3">3. 代码度量分析</h2>
+
+<p>量化代码质量是 C++ 项目管理的刚需。Python 用正则 + <code>Counter</code> 轻量统计，无需安装 cppcheck 等重型工具。</p>
+
+<div class="code-block">
+<div class="lang-label py-label"><span class="dot"></span>PYTHON — 代码度量核心逻辑</div>
+<pre><span class="keyword">import</span> re
+<span class="keyword">from</span> collections <span class="keyword">import</span> Counter
+
+<span class="comment"># 函数数量统计</span>
+func_re = re.compile(
+    <span class="string">r'(?:inline\s+)?(?:static\s+)?(?:virtual\s+)?'</span>
+    <span class="string">r'(?:void|int|float|double|string|auto|bool)\s+'</span>
+    <span class="string">r'(\w+)\s*\([^)]*\)\s*(?:const)?\s*\{'</span>,
+    re.MULTILINE
+)
+
+<span class="comment"># TODO/FIXME 统计</span>
+todo_re = re.compile(<span class="string">r'(TODO|FIXME|HACK|BUG)\b'</span>, re.IGNORECASE)
+
+<span class="comment"># 分支复杂度（简化圈复杂度）</span>
+branch_re = re.compile(<span class="string">r'\b(if|else|for|while|switch|case|catch)\b'</span>)
+
+<span class="comment"># 扫描所有 .cpp/.h 文件</span>
+<span class="keyword">for</span> file <span class="keyword">in</span> Path(<span class="string">"./src"</span>).rglob(<span class="string">"*.cpp"</span>):
+    content = file.read_text()
+    funcs = func_re.findall(content)
+    todos = todo_re.findall(content)
+    complexity = len(branch_re.findall(content))
+    print(f<span class="string">"{file.name}: {len(funcs)} funcs, {len(todos)} TODOs, complexity={complexity}"</span>)</pre>
+</div>
+
+<h3>度量维度一览</h3>
+<table>
+<tr><th>度量项</th><th>正则模式</th><th>用途</th></tr>
+<tr><td>函数数量</td><td><code>r'(\w+)\s*\([^)]*\)\s*\{'</code></td><td>评估模块复杂度</td></tr>
+<tr><td>类数量</td><td><code>r'class\s+(\w+)'</code></td><td>评估架构规模</td></tr>
+<tr><td>TODO/FIXME</td><td><code>r'(TODO|FIXME|HACK)\b'</code></td><td>追踪遗留问题</td></tr>
+<tr><td>圈复杂度</td><td><code>r'\b(if|else|for|while|switch)\b'</code></td><td>评估可维护性</td></tr>
+<tr><td>#include</td><td><code>r'#include'</code></td><td>评估依赖复杂度</td></tr>
+<tr><td>代码行/注释行</td><td><code>line.strip().startswith('//')</code></td><td>评估注释率</td></tr>
+</table>
+
+<div class="tip">
+<strong>dataclass</strong>：用 <code>@dataclass</code> 定义 <code>FileMetrics</code> 结构体，比手写 <code>__init__</code> 简洁——这正是 Day 04 学过的 Python OOP 技巧。
+</div>
+
+<!-- ==================== Section 4 ==================== -->
+<h2 id="s4">4. 构建日志解析</h2>
+
+<p>C++ 编译日志动辄几百行，Python 正则一步提取所有 error/warning/note，然后 <code>defaultdict</code> 按文件分组统计。</p>
+
+<div class="compare">
+<div class="cpp-side">
+<div class="side-label"><span class="dot"></span>Shell 管道方式</div>
+<pre><span class="comment"># grep 管道逐层过滤</span>
+grep <span class="string">"error:"</span> build.log | wc -l
+grep <span class="string">"warning:"</span> build.log | sort -u
+
+<span class="comment"># 优点：快速</span>
+<span class="comment"># 缺点：无法分类统计、无法生成报告</span>
+<span class="comment"># 无法区分 gcc 和 MSVC 格式</span></pre>
+</div>
+<div class="py-side">
+<div class="side-label"><span class="dot"></span>Python 正则解析</div>
+<pre><span class="comment"># 一条正则匹配 gcc/clang 格式</span>
+error_re = re.compile(
+    <span class="string">r'^(.+?):(\d+):(\d+): (error|warning|note): (.+)$'</span>,
+    re.MULTILINE
+)
+
+<span class="comment"># 自动分类+分组统计</span>
+<span class="keyword">from</span> collections <span class="keyword">import</span> defaultdict
+by_file = defaultdict(lambda: Counter())
+
+<span class="keyword">for</span> m <span class="keyword">in</span> error_re.finditer(log_text):
+    file, line, col, level, msg = m.groups()
+    by_file[file][level] += <span class="number">1</span>
+
+<span class="comment"># 还支持 MSVC 格式（备用正则）</span>
+<span class="comment"># 一份脚本覆盖两大编译器</span></pre>
+</div>
+</div>
+
+<h3>双编译器格式支持</h3>
+<table>
+<tr><th>编译器</th><th>日志格式示例</th><th>正则模式</th></tr>
+<tr><td>gcc / clang</td><td><code>main.cpp:15:10: error: ...</code></td><td><code>r'^(.+?):(\d+):(\d+): (error|warning): (.+)$'</code></td></tr>
+<tr><td>MSVC</td><td><code>main.cpp(15): error C2065: ...</code></td><td><code>r'^(.+?)\((\d+)\): (error|warning) (C\d+): (.+)$'</code></td></tr>
+</table>
+
+<div class="tip">
+<strong>defaultdict(lambda: Counter())</strong>：嵌套 defaultdict + Counter，不用预先初始化空 Counter——比 C++ <code>std::map&lt;string, map&lt;string, int&gt;&gt;</code> 简洁得多，Day 02 学过的 Counter 真正发挥了威力。
+</div>
+
+<!-- ==================== Section 5 ==================== -->
+<h2 id="s5">5. 数据驱动的代码生成</h2>
+
+<p>这是 C++ 项目工具链的<strong>核心价值</strong>——从 JSON 规范自动生成 C++ 类，省去手写 getter/setter/构造函数的重复劳动。</p>
+
+<div class="code-block">
+<div class="lang-label py-label"><span class="dot"></span>PYTHON — JSON 规范定义数据模型</div>
+<pre><span class="comment"># 用 JSON 定义类的结构</span>
+spec = {
+    <span class="string">"namespace"</span>: <span class="string">"app"</span>,
+    <span class="string">"classes"</span>: [{
+        <span class="string">"name"</span>: <span class="string">"User"</span>,
+        <span class="string">"fields"</span>: [
+            {<span class="string">"name"</span>: <span class="string">"id"</span>, <span class="string">"type"</span>: <span class="string">"int"</span>, <span class="string">"default"</span>: <span class="string">"0"</span>},
+            {<span class="string">"name"</span>: <span class="string">"name"</span>, <span class="string">"type"</span>: <span class="string">"std::string"</span>, <span class="string">"default"</span>: <span class="string">""</span>},
+        ],
+        <span class="string">"methods"</span>: [<span class="string">"toString"</span>, <span class="string">"validate"</span>]
+    }]
+}</pre>
+</div>
+
+<div class="code-block">
+<div class="lang-label cpp-label"><span class="dot"></span>自动生成的 C++ 头文件</div>
+<pre><span class="keyword">#pragma once</span>
+<span class="keyword">#include</span> <span class="string">&lt;string&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;sstream&gt;</span>
+
+<span class="keyword">namespace</span> <span class="type">app</span> {
+
+<span class="keyword">class</span> <span class="type">User</span> {
+<span class="keyword">private</span>:
+    <span class="type">int</span> id_ = <span class="number">0</span>;
+    <span class="type">std::string</span> name_ = <span class="string">""</span>;
+
+<span class="keyword">public</span>:
+    <span class="func">User</span>() = <span class="keyword">default</span>;
+    <span class="keyword">explicit</span> <span class="func">User</span>(<span class="type">int</span> id, <span class="type">std::string</span> name) : id_(id), name_(name) {}
+
+    <span class="type">int</span> <span class="func">id</span>() <span class="keyword">const</span> { <span class="keyword">return</span> id_; }
+    <span class="type">void</span> <span class="func">set_id</span>(<span class="type">int</span> val) { id_ = val; }
+    <span class="keyword">const</span> <span class="type">std::string</span>& <span class="func">name</span>() <span class="keyword">const</span> { <span class="keyword">return</span> name_; }
+    <span class="type">void</span> <span class="func">set_name</span>(<span class="keyword">const</span> <span class="type">std::string</span>& val) { name_ = val; }
+
+    <span class="type">std::string</span> <span class="func">toString</span>() <span class="keyword">const</span> {
+        <span class="type">std::ostringstream</span> oss;
+        oss << <span class="string">"id="</span> << id_ << <span class="string">";"</span>;
+        oss << <span class="string">"name="</span> << name_ << <span class="string">";"</span>;
+        <span class="keyword">return</span> oss.str();
+    }
+};
+
+} <span class="comment">// namespace app</span></pre>
+</div>
+
+<h3>代码生成器核心逻辑</h3>
+<div class="code-block">
+<div class="lang-label py-label"><span class="dot"></span>PYTHON — 生成头文件的核心循环</div>
+<pre><span class="comment"># 遍历每个字段 → 生成成员变量+getter+setter</span>
+<span class="keyword">for</span> f <span class="keyword">in</span> cls[<span class="string">"fields"</span>]:
+    <span class="comment"># 成员变量（C++ trailing underscore）</span>
+    h_lines.append(f<span class="string">"    {f['type']} {f['name']}_ = {f.get('default', '')};"</span>)
+
+    <span class="comment"># getter：std::string 用 const& 返回，int 直接返回</span>
+    <span class="keyword">if</span> f[<span class="string">"type"</span>] == <span class="string">"std::string"</span>:
+        h_lines.append(
+            f<span class="string">"    const {f['type']}& {f['name']}() const {{ return {f['name']}_; }}"</span>)
+    <span class="keyword">else</span>:
+        h_lines.append(
+            f<span class="string">"    {f['type']} {f['name']}() const {{ return {f['name']}_; }}"</span>)</pre>
+</div>
+
+<div class="tip">
+<strong>数据驱动思维</strong>：JSON 是数据模型（"你想生成什么"），Template 是渲染逻辑（"怎么生成"）。这种分离让代码生成器<strong>可维护、可扩展</strong>——加一个字段只需改 JSON，不改 Python 代码。
+</div>
+
+<!-- ==================== Section 6 ==================== -->
+<h2 id="s6">6. 配置驱动的增量构建</h2>
+
+<p>把构建参数从 Makefile/CMakeLists.txt 抽到 JSON，Python 读配置 → 动态构建命令 → subprocess 执行。</p>
+
+<div class="code-block">
+<div class="lang-label py-label"><span class="dot"></span>PYTHON — build_config.json</div>
+<pre>{
+    <span class="string">"project_root"</span>: <span class="string">"./my_project"</span>,
+    <span class="string">"targets"</span>: [
+        {<span class="string">"name"</span>: <span class="string">"core"</span>, <span class="string">"sources"</span>: [<span class="string">"src/core.cpp"</span>], <span class="string">"type"</span>: <span class="string">"library"</span>},
+        {<span class="string">"name"</span>: <span class="string">"app"</span>, <span class="string">"sources"</span>: [<span class="string">"src/main.cpp"</span>], <span class="string">"type"</span>: <span class="string">"executable"</span>,
+         <span class="string">"depends"</span>: [<span class="string">"core"</span>]}
+    ],
+    <span class="string">"compiler"</span>: <span class="string">"g++"</span>,
+    <span class="string">"flags"</span>: [<span class="string">"-std=c++17"</span>, <span class="string">"-Wall"</span>, <span class="string">"-O2"</span>],
+    <span class="string">"output_dir"</span>: <span class="string">"build"</span>
+}</pre>
+</div>
+
+<div class="compare">
+<div class="cpp-side">
+<div class="side-label"><span class="dot"></span>CMake 构建方式</div>
+<pre><span class="comment"># CMakeLists.txt 定义构建规则</span>
+<span class="comment"># cmake --build build/ 执行构建</span>
+<span class="comment"># 优点：跨平台、成熟生态</span>
+<span class="comment"># 缺点：规则固定，难以动态调整</span>
+
+<span class="keyword">add_library</span>(core src/core.cpp)
+<span class="keyword">add_executable</span>(app src/main.cpp)
+<span class="keyword">target_link_libraries</span>(app core)</pre>
+</div>
+<div class="py-side">
+<div class="side-label"><span class="dot"></span>Python 配置驱动</div>
+<pre><span class="comment"># JSON 配置 → Python 动态构建命令</span>
+config = json.loads(Path(<span class="string">"build_config.json"</span>).read_text())
+
+<span class="keyword">for</span> target <span class="keyword">in</span> config[<span class="string">"targets"</span>]:
+    cmd = f<span class="string">"{config['compiler']} {flags}"</span>
+    <span class="keyword">if</span> target[<span class="string">"type"</span>] == <span class="string">"executable"</span>:
+        deps = <span class="string">"-l"</span>.join(target[<span class="string">"depends"</span>])
+        cmd += f<span class="string">" {sources} {deps} -o {name}"</span>
+    <span class="comment"># subprocess.run(cmd, shell=True)</span></pre>
+</div>
+</div>
+
+<div class="tip">
+<strong>不是替代 CMake</strong>：Python 工具链<strong>补充</strong> CMake，而非替代。常见分工：CMake 处理编译，Python 处理项目初始化、代码生成、日志分析、报告生成。两者搭配效果最佳。
+</div>
+
+<!-- ==================== Section 7 ==================== -->
+<h2 id="s7">7. 文件变更检测（哈希追踪）</h2>
+
+<p>增量构建的关键：判断哪些文件<strong>真正变了</strong>。CMake 用文件时间戳（touch 就会触发重建），Python 用 <code>hashlib</code> 内容哈希更精确。</p>
+
+<div class="compare">
+<div class="cpp-side">
+<div class="side-label"><span class="dot"></span>时间戳方式（CMake）</div>
+<pre><span class="comment"># CMake 用文件修改时间判断</span>
+<span class="comment"># 问题：touch file.cpp 就触发重建</span>
+<span class="comment"># 即使文件内容没变</span>
+
+<span class="comment"># C++ <chrono> 方式</span>
+<span class="keyword">auto</span> mtime = std::filesystem::last_write_time(path);
+<span class="comment">// 仅比较时间戳，不比较内容</span></pre>
+</div>
+<div class="py-side">
+<div class="side-label"><span class="dot"></span>内容哈希方式（Python）</div>
+<pre><span class="keyword">import</span> hashlib
+
+<span class="keyword">def</span> <span class="func">file_hash</span>(path):
+    <span class="string">"""SHA256 哈希 —— 内容变了才重建"""</span>
+    h = hashlib.sha256()
+    h.update(Path(path).read_bytes())
+    <span class="keyword">return</span> h.hexdigest()[:<span class="number">16</span>]  <span class="comment"># 16位足够判断变更</span>
+
+<span class="comment"># 对比新旧哈希</span>
+old = hash_cache.get(file_path)
+new = file_hash(file_path)
+<span class="keyword">if</span> new != old:
+    need_rebuild.append(file_path)  <span class="comment"># 真正变了</span></pre>
+</div>
+</div>
+
+<div class="warn">
+<strong>哈希缓存</strong>：用 JSON 保存上次哈希（<code>.build_hashes.json</code>），下次构建时加载对比。这比 CMake 的 <code>CMakeCache.txt</code> 更轻量、更可读。
+</div>
+
+<!-- ==================== Section 8 ==================== -->
+<h2 id="s8">8. 测试发现与自动运行</h2>
+
+<p>CTest 需要手动 <code>add_test()</code> 注册每个测试；Python 用 <code>glob</code> 自动发现 <code>test_*.cpp</code> 文件。</p>
+
+<div class="compare">
+<div class="cpp-side">
+<div class="side-label"><span class="dot"></span>CTest 手动注册</div>
+<pre><span class="comment"># CMakeLists.txt 中逐个注册</span>
+add_test(NAME test_user COMMAND test_user)
+add_test(NAME test_config COMMAND test_config)
+<span class="comment"># 新增测试需要手动添加这一行</span></pre>
+</div>
+<div class="py-side">
+<div class="side-label"><span class="dot"></span>Python 自动发现</div>
+<pre><span class="comment"># glob 一键发现所有测试文件</span>
+test_files = Path(<span class="string">"tests/"</span>).glob(<span class="string">"test_*.cpp"</span>)
+
+<span class="comment"># 用 dataclass 记录结果</span>
+<span class="decorator">@dataclass</span>
+<span class="keyword">class</span> <span class="type">TestResult</span>:
+    name: str
+    passed: bool
+    duration_ms: float
+    output: str = <span class="string">""</span>
+
+<span class="comment"># 生成 JUnit XML（CI/CD 集成）</span>
+<span class="comment"># 比 CTest 输出更标准化</span></pre>
+</div>
+</div>
+
+<h3>JUnit XML 格式</h3>
+<p>Python 生成 JUnit XML 报告，可直接集成 Jenkins/GitHub Actions 等 CI 系统——这是 Day 09 学过的 CTest 集成延伸。</p>
+
+<div class="code-block">
+<div class="lang-label cpp-label"><span class="dot"></span>JUnit XML 格式示例</div>
+<pre><span class="string">&lt;testsuite</span> tests=<span class="string">"4"</span> failures=<span class="string">"1"</span> time=<span class="string">"0.07"</span><span class="string">&gt;</span>
+  <span class="string">&lt;testcase</span> classname=<span class="string">"app"</span> name=<span class="string">"test_user"</span> time=<span class="string">"0.013"</span><span class="string">&gt;</span><span class="string">&lt;/testcase&gt;</span>
+  <span class="string">&lt;testcase</span> classname=<span class="string">"app"</span> name=<span class="string">"test_config"</span> time=<span class="string">"0.008"</span><span class="string">&gt;</span><span class="string">&lt;/testcase&gt;</span>
+  <span class="string">&lt;testcase</span> classname=<span class="string">"app"</span> name=<span class="string">"test_parser"</span> time=<span class="string">"0.045"</span><span class="string">&gt;</span>
+    <span class="string">&lt;failure</span> message=<span class="string">"Assertion failed"</span><span class="string">/&gt;</span>
+  <span class="string">&lt;/testcase&gt;</span>
+  <span class="string">&lt;testcase</span> classname=<span class="string">"app"</span> name=<span class="string">"test_utils"</span> time=<span class="string">"0.003"</span><span class="string">&gt;</span><span class="string">&lt;/testcase&gt;</span>
+<span class="string">&lt;/testsuite&gt;</span></pre>
+</div>
+
+<!-- ==================== Section 9 ==================== -->
+<h2 id="s9">9. HTML 报告生成</h2>
+
+<p>所有度量、日志、测试数据最终汇总为一份深色主题 HTML 报告——用 Python 生成比手动整理快 10 倍。</p>
+
+<div class="code-block">
+<div class="lang-label py-label"><span class="dot"></span>PYTHON — HTML 报告生成核心</div>
+<pre><span class="keyword">from</span> string <span class="keyword">import</span> Template
+
+<span class="comment"># 用 Template 定义报告模板</span>
+html_tpl = Template(<span class="string">"""
+&lt;h1&gt;📊 $name — 项目报告&lt;/h1&gt;
+&lt;div class="stat-grid"&gt;
+$stats_html
+&lt;/div&gt;
+&lt;h2&gt;🔧 构建日志&lt;/h2&gt;
+$log_section
+&lt;h2&gt;📁 文件统计&lt;/h2&gt;
+$file_table
+"""</span>)
+
+<span class="comment"># 动态填充数据</span>
+stats_html = <span class="string">""</span>
+<span class="keyword">for</span> key, label <span class="keyword">in</span> [(<span class="string">"total_lines"</span>, <span class="string">"总行数"</span>), (<span class="string">"functions"</span>, <span class="string">"函数数"</span>)]:
+    stats_html += f<span class="string">'&lt;div class="stat"&gt;{total[key]}&lt;/div&gt;'</span>
+
+<span class="comment"># 写入 HTML 文件</span>
+Path(<span class="string">"report.html"</span>).write_text(html_tpl.substitute(
+    name=project_name, stats_html=stats_html, ...
+))</pre>
+</div>
+
+<div class="tip">
+<strong>数据 → HTML</strong>：Python 把 JSON 数据渲染为 HTML，而 C++ 项目通常只有 Make 输出纯文本。深色主题 HTML 报告在浏览器中直观清晰，方便团队分享。
+</div>
+
+<!-- ==================== Section 10 ==================== -->
+<h2 id="s10">10. 完整工具链 CLI 集成</h2>
+
+<p>所有模块用 <code>argparse</code> 整合为一个 CLI 工具，类似 Day 09 的 <code>cpp_project_builder.py</code>，但覆盖更广。</p>
+
+<div class="code-block">
+<div class="lang-label py-label"><span class="dot"></span>PYTHON — argparse CLI 入口</div>
+<pre><span class="keyword">import</span> argparse
+
+parser = argparse.ArgumentParser(
+    description=<span class="string">"C++ 项目综合工具链"</span>)
+subparsers = parser.add_subparsers(dest=<span class="string">"command"</span>)
+
+<span class="comment"># init 子命令</span>
+p_init = subparsers.add_parser(<span class="string">"init"</span>, help=<span class="string">"创建项目骨架"</span>)
+p_init.add_argument(<span class="string">"--name"</span>, required=<span class="builtin">True</span>)
+p_init.add_argument(<span class="string">"--dir"</span>, default=<span class="string">"."</span>)
+
+<span class="comment"># gen 子命令</span>
+p_gen = subparsers.add_parser(<span class="string">"gen"</span>, help=<span class="string">"代码生成"</span>)
+p_gen.add_argument(<span class="string">"--spec"</span>, required=<span class="builtin">True</span>)
+
+<span class="comment"># metrics 子命令</span>
+p_met = subparsers.add_parser(<span class="string">"metrics"</span>, help=<span class="string">"代码度量"</span>)
+p_met.add_argument(<span class="string">"--dir"</span>, required=<span class="builtin">True</span>)
+
+<span class="comment"># report 子命令</span>
+p_rep = subparsers.add_parser(<span class="string">"report"</span>, help=<span class="string">"生成报告"</span>)
+p_rep.add_argument(<span class="string">"--dir"</span>, required=<span class="builtin">True</span>)</pre>
+</div>
+
+<h3>使用示例</h3>
+<div class="code-block">
+<div class="lang-label" style="color:var(--muted)"><span class="dot" style="background:var(--muted)"></span>命令行用法</div>
+<pre><span class="comment"># 创建项目骨架</span>
+python cpp_toolchain.py init --name my_app --dir ./projects
+
+<span class="comment"># 代码生成</span>
+python cpp_toolchain.py gen --spec class_spec.json
+
+<span class="comment"># 代码度量</span>
+python cpp_toolchain.py metrics --dir ./src
+
+<span class="comment"># 构建日志解析</span>
+python cpp_toolchain.py log --file build.log
+
+<span class="comment"># 生成 HTML 报告</span>
+python cpp_toolchain.py report --dir ./my_app
+
+<span class="comment"># 演示模式（无需真实项目）</span>
+python cpp_toolchain.py --demo</pre>
+</div>
+
+<div class="tip">
+<strong>argparse vs 手动 sys.argv</strong>：argparse 自动生成帮助信息、验证参数、支持子命令。C++ 的 CLI 解析通常用第三方库（如 CLI11），Python 标准库就有 argparse。
+</div>
+
+<!-- ==================== Section 11 ==================== -->
+<h2 id="s11">11. 10 天回顾与进阶方向</h2>
+
+<div class="summary-box">
+<h2>🎉 10 天学习旅程完成！</h2>
+<p>从 Python 入门到 C++ 项目工具链，你已经掌握了 Python 辅助 C++ 开发的核心技能</p>
+</div>
+
+<h3>10 天知识地图</h3>
+<table>
+<tr><th>Day</th><th>主题</th><th>核心技能</th><th>在本章的运用</th></tr>
+<tr><td>01</td><td>Python 入门 & C++ 对比</td><td>语法差异、数据类型</td><td>理解 Python 代码风格</td></tr>
+<tr><td>02</td><td>流程控制与函数进阶</td><td>推导式、装饰器、生成器</td><td>@contextmanager 计时器</td></tr>
+<tr><td>03</td><td>文件操作与异常处理</td><td>pathlib、with、@contextmanager</td><td>文件读写、项目脚手架</td></tr>
+<tr><td>04</td><td>面向对象编程</td><td>dataclass、继承、Mixin</td><td>FileMetrics/TestResult</td></tr>
+<tr><td>05</td><td>模块、包与标准库</td><td>json、hashlib、glob、argparse</td><td>JSON配置、哈希缓存、CLI</td></tr>
+<tr><td>06</td><td>正则表达式与文本处理</td><td>re、分组、替换</td><td>日志解析、代码度量</td></tr>
+<tr><td>07</td><td>subprocess 与系统调用</td><td>subprocess.run、Popen</td><td>调用编译器</td></tr>
+<tr><td>08</td><td>ctypes / pybind11</td><td>Python 调用 C++ DLL</td><td>理解混合编程边界</td></tr>
+<tr><td>09</td><td>C++ 项目自动化</td><td>CMake 集成、并行构建</td><td>增量构建框架</td></tr>
+<tr><td class="green-h">10</td><td class="green-h">综合实战：工具链</td><td class="green-h">全部技能集成</td><td class="green-h">✅ 本章</td></tr>
+</table>
+
+<h3>进阶方向</h3>
+<p>10 天只是起点。以下是继续深入的方向：</p>
+
+<table>
+<tr><th>方向</th><th>推荐技术</th><th>适用场景</th></tr>
+<tr><td>CI/CD 自动化</td><td>GitHub Actions + Python 脚本</td><td>自动构建、测试、发布</td></tr>
+<tr><td>性能分析</td><td>Python + valgrind/gprof 解析</td><td>自动分析 C++ 性能瓶颈</td></tr>
+<tr><td>代码生成进阶</td><td>Jinja2 模板引擎</td><td>更复杂的代码生成（序列化、RPC）</td></tr>
+<tr><td>AST 分析</td><td>pybind11 + Clang Python 绑定</td><td>解析 C++ AST，自动生成绑定</td></tr>
+<tr><td>文档生成</td><td>Sphinx + Doxygen XML</td><td>从 C++ 源码自动生成文档</td></tr>
+<tr><td>包管理</td><td>Conan / vcpkg Python API</td><td>自动化依赖管理</td></tr>
+<tr><td>跨平台构建</td><td>Python + Docker + CMake</td><td>一键多平台编译</td></tr>
+</table>
+
+<div class="tip">
+<strong>持续学习</strong>：这 10 天给你的是"用 Python 辅助 C++ 开发"的<strong>思维方式</strong>和<strong>核心技能</strong>。遇到具体问题时，回想对应 Day 的知识点，再查阅 Python 文档深入。Python 生态远比我们覆盖的更丰富——遇到需求时，先搜 Python 标准库和 PyPI。
+</div>
+
+<div class="chapters">
+<h3>🛠️ 本章配套文件</h3>
+<div class="chapter-list">
+<div class="chapter-item"><div class="chapter-num">📄</div>day10_toolchain.html — 本文档<div class="topic-tag">HTML</div></div>
+<div class="chapter-item"><div class="chapter-num">📄</div>day10_basics.py — 9 个演示模块<div class="topic-tag">Python</div></div>
+<div class="chapter-item"><div class="chapter-num">🔧</div>cpp_toolchain.py — 完整 CLI 工具链<div class="topic-tag cpp">工具</div></div>
+</div>
+</div>
+
+<div class="nav-bar">
+<a href="../Day09/day09_cpp_automation.html">← Day 09</a>
+<span style="color:var(--yellow);font-size:14px;font-weight:700">🎉 10天旅程完成！</span>
+<a href="../index.html">返回目录 →</a>
+</div>
+
+</div>
+
+<div class="footer">
+<p>🚀 <strong>每日Py</strong> — Python 辅助 C++ 开发 | Day 10 / 10</p>
+<p style="margin-top:6px">10 天全部完成！Python × C++ 工具链 · 加油 🎉</p>
+</div>
+
+<script>
+function scrollTo(id){document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'})}
+</script>
+
+</body>
+</html>

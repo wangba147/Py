@@ -1,0 +1,868 @@
+#!/usr/bin/env python3
+"""
+cpp_toolchain.py —— C++ 项目综合工具链
+
+把前 9 天学到的所有 Python 技能整合为一个实用工具：
+  init    → 创建 C++ 项目骨架
+  gen     → 从 JSON 规范生成 C++ 类
+  build   → 配置驱动的增量构建
+  test    → 自动发现并运行单元测试
+  metrics → 代码度量分析
+  log     → 构建日志解析与统计
+  report  → 生成 HTML 项目报告
+
+用法：
+  python cpp_toolchain.py init --name my_project --dir ./output
+  python cpp_toolchain.py gen --spec class_spec.json
+  python cpp_toolchain.py build --config build_config.json
+  python cpp_toolchain.py metrics --dir ./src
+  python cpp_toolchain.py log --file build.log
+  python cpp_toolchain.py report --dir ./my_project
+  python cpp_toolchain.py --demo   # 演示模式（不需要真实项目）
+"""
+
+import os
+import sys
+import json
+import re
+import shutil
+import subprocess
+import pathlib
+import hashlib
+import time
+import tempfile
+import argparse
+import textwrap
+from datetime import datetime
+from string import Template
+from collections import defaultdict, Counter
+from dataclasses import dataclass, field, asdict
+from typing import List, Dict, Optional, Tuple
+from contextlib import contextmanager
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
+# ============================================================
+# 通用工具
+# ============================================================
+
+@contextmanager
+def timer(name: str):
+    """计时器 —— C++ <chrono> 的 Python 对应"""
+    start = time.perf_counter()
+    yield
+    elapsed = time.perf_counter() - start
+    print(f"  ⏱ [{name}] {elapsed:.4f}s ({elapsed*1000:.2f}ms)")
+
+
+def file_hash(path: pathlib.Path) -> str:
+    """计算文件 SHA256 哈希（用于增量构建判断）"""
+    h = hashlib.sha256()
+    h.update(path.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def ensure_dir(path: pathlib.Path) -> pathlib.Path:
+    """确保目录存在"""
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+# ============================================================
+# 模块 1: 项目脚手架 (init)
+# ============================================================
+
+CMAKE_TEMPLATE = Template(textwrap.dedent("""\
+    cmake_minimum_required(VERSION 3.16)
+    project($name VERSION $version LANGUAGES CXX)
+
+    set(CMAKE_CXX_STANDARD $cxx_std)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+
+    # Source files
+    file(GLOB_RECURSE SOURCES "src/*.cpp")
+    file(GLOB_RECURSE HEADERS "include/*.h" "include/*.hpp")
+
+    add_executable($name $$SOURCES $$HEADERS)
+    target_include_directories($name PRIVATE include)
+
+    # Testing
+    option(BUILD_TESTS "Build tests" ON)
+    if(BUILD_TESTS)
+        enable_testing()
+        add_subdirectory(tests)
+    endif()
+
+    # Installation
+    install(TARGETS $name DESTINATION bin)
+"""))
+
+MAIN_CPP_TEMPLATE = Template(textwrap.dedent("""\
+    #include <iostream>
+    #include "$header"
+
+    int main() {
+        std::cout << "$name v$version\\n";
+        return 0;
+    }
+"""))
+
+HEADER_TEMPLATE = Template(textwrap.dedent("""\
+    #pragma once
+    #include <string>
+
+    namespace $ns {
+    // TODO: Add your declarations here
+    }
+"""))
+
+GITIGNORE = textwrap.dedent("""\
+    build/
+    .vs/
+    *.obj
+    *.o
+    *.exe
+    *.a
+    *.so
+    *.dll
+    CMakeCache.txt
+    CMakeFiles/
+    cmake_install.cmake
+    Makefile
+    .idea/
+    *.swp
+    *.swo
+""")
+
+
+def cmd_init(name: str, output_dir: str, version: str = "0.1.0", cxx_std: str = "17"):
+    """创建 C++ 项目骨架"""
+    project_dir = pathlib.Path(output_dir) / name
+
+    if project_dir.exists():
+        print(f"⚠ 目录已存在：{project_dir}")
+        return
+
+    # 创建目录结构
+    dirs = ["src", "include", "tests", "docs", "scripts", "build"]
+    for d in dirs:
+        ensure_dir(project_dir / d)
+
+    # 生成 CMakeLists.txt
+    (project_dir / "CMakeLists.txt").write_text(
+        CMAKE_TEMPLATE.substitute(name=name, version=version, cxx_std=cxx_std),
+        encoding="utf-8"
+    )
+
+    # 生成头文件
+    header = f"{name}.h"
+    ns = name.replace("_", "").replace("-", "")
+    (project_dir / "include" / header).write_text(
+        HEADER_TEMPLATE.substitute(ns=ns),
+        encoding="utf-8"
+    )
+
+    # 生成 main.cpp
+    (project_dir / "src" / "main.cpp").write_text(
+        MAIN_CPP_TEMPLATE.substitute(name=name, version=version, header=header),
+        encoding="utf-8"
+    )
+
+    # 生成 tests/CMakeLists.txt
+    test_cmake = textwrap.dedent("""\
+        # Test configuration
+        file(GLOB TEST_SOURCES "*.cpp")
+        foreach(test_file $$TEST_SOURCES)
+            get_filename_component(test_name $$test_file NAME_WE)
+            add_executable($$test_name $$test_file)
+            target_link_libraries($$test_name PRIVATE $$PROJECT_NAME)
+            add_test(NAME $$test_name COMMAND $$test_name)
+        endforeach()
+    """)
+    (project_dir / "tests" / "CMakeLists.txt").write_text(test_cmake, encoding="utf-8")
+
+    # 生成 .gitignore
+    (project_dir / ".gitignore").write_text(GITIGNORE, encoding="utf-8")
+
+    # 生成 README
+    readme = f"# {name}\n\n{version}\n\nC++{cxx_std} project generated by cpp_toolchain.\n\n## Build\n```bash\ncmake -B build && cmake --build build\n```\n\n## Test\n```bash\nctest --test-dir build\n```\n"
+    (project_dir / "README.md").write_text(readme, encoding="utf-8")
+
+    # 生成构建配置
+    build_config = {
+        "project_root": str(project_dir),
+        "targets": [{"name": name, "sources": ["src/main.cpp"], "type": "executable"}],
+        "compiler": "g++",
+        "flags": [f"-std=c++{cxx_std}", "-Wall", "-O2"],
+        "output_dir": "build"
+    }
+    (project_dir / "scripts" / "build_config.json").write_text(
+        json.dumps(build_config, indent=2), encoding="utf-8"
+    )
+
+    print(f"✅ 项目 '{name}' 已创建：{project_dir}")
+    for f in sorted(project_dir.rglob("*")):
+        if f.is_file():
+            print(f"  {f.relative_to(project_dir)} ({f.stat().st_size} bytes)")
+
+
+# ============================================================
+# 模块 2: 代码生成 (gen)
+# ============================================================
+
+def cmd_gen(spec_file: str, output_dir: str = None):
+    """从 JSON 规范生成 C++ 类"""
+    spec_path = pathlib.Path(spec_file)
+    if not spec_path.exists():
+        print(f"❌ 规范文件不存在：{spec_file}")
+        return
+
+    spec = json.loads(spec_path.read_text(encoding="utf-8"))
+
+    if output_dir:
+        out = pathlib.Path(output_dir)
+    else:
+        out = spec_path.parent
+
+    ensure_dir(out)
+
+    for cls in spec.get("classes", []):
+        cls_name = cls["name"]
+        ns = spec.get("namespace", "")
+
+        # 生成头文件
+        h_lines = [
+            "#pragma once",
+            "#include <string>",
+            "#include <sstream>",
+            "#include <vector>",
+        ]
+        if ns:
+            h_lines.append(f"namespace {ns} {{")
+
+        h_lines.extend(["", f"class {cls_name} {{", "private:"])
+
+        # 成员变量 —— C++ private + trailing underscore
+        for f in cls["fields"]:
+            default = f.get("default", "")
+            h_lines.append(f"    {f['type']} {f['name']}_ = {default};")
+
+        h_lines.extend(["", "public:", "    // Default constructor"])
+        h_lines.append(f"    {cls_name}() = default;")
+
+        # 带参构造函数
+        params = ", ".join(f"{f['type']} {f['name']}" for f in cls["fields"])
+        inits = ", ".join(f"{f['name']}_({f['name']})" for f in cls["fields"])
+        h_lines.append(f"    explicit {cls_name}({params}) : {inits} {{}}")
+
+        # Getter/Setter
+        for f in cls["fields"]:
+            h_lines.append("")
+            ret_type = f["type"]
+            if ret_type == "std::string":
+                h_lines.append(f"    const {ret_type}& {f['name']}() const {{ return {f['name']}_; }}")
+                h_lines.append(f"    void set_{f['name']}(const std::string& val) {{ {f['name']}_ = val; }}")
+            else:
+                h_lines.append(f"    {ret_type} {f['name']}() const {{ return {f['name']}_; }}")
+                h_lines.append(f"    void set_{f['name']}({ret_type} val) {{ {f['name']}_ = val; }}")
+
+        # 自定义方法
+        for method in cls.get("methods", []):
+            h_lines.append("")
+            if method == "toString":
+                h_lines.extend([
+                    "    std::string toString() const {",
+                    "        std::ostringstream oss;",
+                ])
+                for f in cls["fields"]:
+                    h_lines.append(f"        oss << \"{f['name']}=\" << {f['name']}_ << \";\";")
+                h_lines.extend(["        return oss.str();", "    }"])
+            elif method == "validate":
+                h_lines.extend([
+                    "    bool validate() const {",
+                    "        return true; // TODO: add validation rules",
+                    "    }",
+                ])
+            elif method == "serialize":
+                h_lines.extend([
+                    "    std::string serialize() const {",
+                    f"        return toString(); // TODO: implement JSON serialization",
+                    "    }",
+                ])
+
+        h_lines.extend(["};"])
+        if ns:
+            h_lines.extend(["", f"}} // namespace {ns}"])
+
+        header_file = out / f"{cls_name}.h"
+        header_file.write_text("\n".join(h_lines) + "\n", encoding="utf-8")
+        print(f"  ✅ 生成 {header_file}")
+
+        # 生成源文件（如果 methods 中有需要实现的）
+        impl_methods = [m for m in cls.get("methods", []) if m not in ("toString", "validate")]
+        if impl_methods:
+            cpp_lines = [
+                f'#include "{cls_name}.h"',
+            ]
+            if ns:
+                cpp_lines.append(f"namespace {ns} {{")
+            for m in impl_methods:
+                cpp_lines.extend([
+                    "",
+                    f"// TODO: implement {m}",
+                ])
+            if ns:
+                cpp_lines.extend(["", f"}} // namespace {ns}"])
+            src_file = out / f"{cls_name}.cpp"
+            src_file.write_text("\n".join(cpp_lines) + "\n", encoding="utf-8")
+            print(f"  ✅ 生成 {src_file}")
+
+
+# ============================================================
+# 模块 3: 增量构建 (build)
+# ============================================================
+
+HASH_CACHE_FILE = ".build_hashes.json"
+
+
+def cmd_build(config_file: str, force: bool = False, jobs: int = 4):
+    """配置驱动的增量构建"""
+    config_path = pathlib.Path(config_file)
+    if not config_path.exists():
+        print(f"❌ 配置文件不存在：{config_file}")
+        return
+
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    project_root = pathlib.Path(config.get("project_root", "."))
+    output_dir = project_root / config.get("output_dir", "build")
+
+    ensure_dir(output_dir)
+
+    # 加载哈希缓存
+    cache_path = output_dir / HASH_CACHE_FILE
+    if cache_path.exists() and not force:
+        hash_cache = json.loads(cache_path.read_text(encoding="utf-8"))
+    else:
+        hash_cache = {}
+
+    # 检测变更
+    changed_files = set()
+    for target in config["targets"]:
+        for src in target["sources"]:
+            src_path = project_root / src
+            if src_path.exists():
+                current = file_hash(src_path)
+                old = hash_cache.get(src, "")
+                if current != old or force:
+                    changed_files.add(src)
+                    hash_cache[src] = current
+
+    if not changed_files and not force:
+        print("✅ 所有文件无变更，无需重新构建")
+        return
+
+    print(f"🔨 需要重新编译 {len(changed_files)} 个文件：")
+    for f in changed_files:
+        print(f"  {f}")
+
+    # 构建命令
+    compiler = config.get("compiler", "g++")
+    flags = " ".join(config.get("flags", []))
+
+    results = []
+
+    def build_target(target):
+        """构建单个 target"""
+        sources = [str(project_root / s) for s in target["sources"] if s in changed_files or force]
+        if not sources:
+            return None
+
+        name = target["name"]
+        src_str = " ".join(sources)
+
+        if target["type"] == "library":
+            output = str(output_dir / f"{name}.a")
+            cmd = f"{compiler} {flags} -c {src_str} -o {output}"
+        else:
+            deps = " ".join(f"-l{d}" for d in target.get("depends", []))
+            output = str(output_dir / name)
+            cmd = f"{compiler} {flags} {src_str} {deps} -o {output}"
+
+        print(f"  → {cmd}")
+        return {"name": name, "cmd": cmd, "output": output}
+
+    for target in config["targets"]:
+        result = build_target(target)
+        if result:
+            results.append(result)
+
+    # 保存哈希缓存
+    cache_path.write_text(json.dumps(hash_cache, indent=2), encoding="utf-8")
+
+    print(f"✅ 构建完成，{len(results)} 个 target 已处理")
+
+    # 生成构建报告
+    report_path = output_dir / "build_report.json"
+    report = {
+        "timestamp": datetime.now().isoformat(),
+        "changed_files": list(changed_files),
+        "targets": results,
+        "compiler": compiler,
+        "flags": flags,
+    }
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+
+# ============================================================
+# 模块 4: 代码度量 (metrics)
+# ============================================================
+
+@dataclass
+class FileMetrics:
+    path: str
+    total_lines: int = 0
+    code_lines: int = 0
+    comment_lines: int = 0
+    blank_lines: int = 0
+    functions: int = 0
+    classes: int = 0
+    includes: int = 0
+    todos: int = 0
+    complexity: int = 0
+
+
+def cmd_metrics(dir_path: str, extensions: List[str] = None):
+    """代码度量分析"""
+    if extensions is None:
+        extensions = ["*.cpp", "*.h", "*.hpp"]
+
+    root = pathlib.Path(dir_path)
+    if not root.exists():
+        print(f"❌ 目录不存在：{dir_path}")
+        return
+
+    # 收集所有源文件
+    all_files = []
+    for ext in extensions:
+        all_files.extend(root.rglob(ext))
+
+    if not all_files:
+        print(f"⚠ 未找到匹配文件（{extensions}）")
+        return
+
+    # 正则模式
+    func_re = re.compile(
+        r'(?:inline\s+)?(?:static\s+)?(?:virtual\s+)?'
+        r'(?:void|int|float|double|string|auto|bool|size_t|std::string)\s+'
+        r'(\w+)\s*\([^)]*\)\s*(?:const)?\s*(?:\{|=)',
+        re.MULTILINE
+    )
+    class_re = re.compile(r'class\s+(\w+)', re.MULTILINE)
+    include_re = re.compile(r'#include', re.MULTILINE)
+    todo_re = re.compile(r'(TODO|FIXME|HACK|BUG)\b', re.IGNORECASE)
+    branch_re = re.compile(r'\b(if|else|for|while|switch|case|catch|&&|\|\|)\b')
+
+    total_metrics = FileMetrics(path="__total__")
+
+    per_file = []
+    for f in sorted(all_files):
+        content = f.read_text(encoding="utf-8", errors="replace")
+        lines = content.split('\n')
+
+        m = FileMetrics(
+            path=str(f.relative_to(root)),
+            total_lines=len(lines),
+            code_lines=len([l for l in lines if l.strip() and not l.strip().startswith('//')]),
+            comment_lines=len([l for l in lines if l.strip().startswith('//')]),
+            blank_lines=len([l for l in lines if not l.strip()]),
+            functions=len(func_re.findall(content)),
+            classes=len(class_re.findall(content)),
+            includes=len(include_re.findall(content)),
+            todos=len(todo_re.findall(content)),
+            complexity=len(branch_re.findall(content)),
+        )
+        per_file.append(m)
+
+        total_metrics.total_lines += m.total_lines
+        total_metrics.code_lines += m.code_lines
+        total_metrics.comment_lines += m.comment_lines
+        total_metrics.blank_lines += m.blank_lines
+        total_metrics.functions += m.functions
+        total_metrics.classes += m.classes
+        total_metrics.includes += m.includes
+        total_metrics.todos += m.todos
+        total_metrics.complexity += m.complexity
+
+    # 打印汇总
+    print("=" * 60)
+    print(f"代码度量：{dir_path}")
+    print("=" * 60)
+    print(f"  文件数：{len(all_files)}")
+    print(f"  总行数：{total_metrics.total_lines}")
+    print(f"  代码行：{total_metrics.code_lines}")
+    print(f"  注释行：{total_metrics.comment_lines}")
+    print(f"  空行：  {total_metrics.blank_lines}")
+    print(f"  函数数：{total_metrics.functions}")
+    print(f"  类数量：{total_metrics.classes}")
+    print(f"  includes：{total_metrics.includes}")
+    print(f"  TODO/FIXME：{total_metrics.todos}")
+    print(f"  分支复杂度：{total_metrics.complexity}")
+    print()
+
+    # 每文件详情
+    print("按文件统计：")
+    for m in per_file:
+        print(f"  {m.path}")
+        print(f"    {m.total_lines} lines | {m.functions} funcs | {m.classes} classes | {m.todos} TODOs")
+
+    # 返回数据供 report 使用
+    return {"total": asdict(total_metrics), "per_file": [asdict(m) for m in per_file]}
+
+
+# ============================================================
+# 模块 5: 构建日志解析 (log)
+# ============================================================
+
+@dataclass
+class LogEntry:
+    file: str
+    line: int
+    col: int
+    level: str
+    message: str
+
+
+def cmd_log(log_file: str):
+    """解析构建日志"""
+    log_path = pathlib.Path(log_file)
+    if not log_path.exists():
+        print(f"❌ 日志文件不存在：{log_file}")
+        return
+
+    content = log_path.read_text(encoding="utf-8", errors="replace")
+
+    # gcc/clang 格式解析
+    error_re = re.compile(
+        r'^(.+?):(\d+):(\d+): (error|warning|note): (.+)$', re.MULTILINE
+    )
+
+    entries = []
+    for m in error_re.finditer(content):
+        entry = LogEntry(
+            file=m.group(1), line=int(m.group(2)), col=int(m.group(3)),
+            level=m.group(4), message=m.group(5)
+        )
+        entries.append(entry)
+
+    # MSVC 格式解析（备用）
+    msvc_re = re.compile(
+        r'^(.+?)\((\d+)\): (error|warning) (C\d+): (.+)$', re.MULTILINE
+    )
+    for m in msvc_re.finditer(content):
+        entry = LogEntry(
+            file=m.group(1), line=int(m.group(2)), col=0,
+            level=m.group(3), message=f"{m.group(4)}: {m.group(5)}"
+        )
+        entries.append(entry)
+
+    # 分类统计
+    errors = [e for e in entries if e.level == "error"]
+    warnings = [e for e in entries if e.level == "warning"]
+    notes = [e for e in entries if e.level == "note"]
+
+    print("=" * 60)
+    print(f"构建日志分析：{log_file}")
+    print("=" * 60)
+    print(f"  错误：{len(errors)}")
+    print(f"  警告：{len(warnings)}")
+    print(f"  备注：{len(notes)}")
+
+    if errors:
+        print("\n❌ 错误详情：")
+        for e in errors:
+            # 只显示文件名部分，不显示完整路径
+            short_file = pathlib.Path(e.file).name
+            print(f"  {short_file}:{e.line}:{e.col} → {e.message}")
+
+    if warnings:
+        print("\n⚠️ 警告详情：")
+        for w in warnings:
+            short_file = pathlib.Path(w.file).name
+            print(f"  {short_file}:{w.line}:{w.line} → {w.message}")
+
+    # 按文件分组
+    by_file = defaultdict(lambda: Counter())
+    for e in entries:
+        short_file = pathlib.Path(e.file).name
+        by_file[short_file][e.level] += 1
+
+    if by_file:
+        print("\n按文件统计：")
+        for f, counts in sorted(by_file.items(), key=lambda x: sum(x[1].values()), reverse=True):
+            print(f"  {f}: error={counts.get('error',0)} warning={counts.get('warning',0)}")
+
+    return {"errors": len(errors), "warnings": len(warnings), "entries": [asdict(e) for e in entries]}
+
+
+# ============================================================
+# 模块 6: HTML 报告生成 (report)
+# ============================================================
+
+HTML_REPORT_TEMPLATE = Template(textwrap.dedent("""\
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>$name - Project Report</title>
+<style>
+:root { --bg:#0f1117; --surface:#161822; --card:#1c1f2e; --border:#2a2d3e;
+        --fg:#e4e6f0; --muted:#8b8fa3; --accent:#4fc3f7; --green:#66bb6a;
+        --red:#ef5350; --orange:#ffa726; --yellow:#ffee58; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI','Microsoft YaHei',sans-serif; background:var(--bg);
+       color:var(--fg); line-height:1.7; }
+.container { max-width:860px; margin:0 auto; padding:40px 24px; }
+h1 { font-size:28px; color:#fff; margin-bottom:8px; }
+h2 { font-size:20px; color:var(--accent); margin:24px 0 12px; border-bottom:1px solid var(--border); padding-bottom:6px; }
+.meta { color:var(--muted); font-size:13px; margin-bottom:24px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:10px;
+        padding:20px; margin-bottom:16px; }
+.stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+             gap:12px; }
+.stat-item { background:var(--surface); border-radius:8px; padding:14px; text-align:center; }
+.stat-num { font-size:24px; font-weight:700; color:#fff; }
+.stat-label { font-size:11px; color:var(--muted); margin-top:4px; }
+.error-item { background:rgba(239,83,80,0.1); border-left:3px solid var(--red);
+              padding:12px 16px; margin-bottom:8px; border-radius:0 6px 6px 0; }
+.warning-item { background:rgba(255,167,38,0.1); border-left:3px solid var(--orange);
+               padding:12px 16px; margin-bottom:8px; border-radius:0 6px 6px 0; }
+table { width:100%; border-collapse:collapse; }
+th { background:var(--surface); color:var(--muted); font-size:12px;
+     text-align:left; padding:8px 12px; }
+td { padding:8px 12px; border-bottom:1px solid var(--border); font-size:13px; }
+.pass { color:var(--green); } .fail { color:var(--red); }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>📊 $name — 项目报告</h1>
+<div class="meta">生成时间：$timestamp | 工具：cpp_toolchain.py</div>
+
+$metrics_section
+
+$log_section
+
+$file_section
+
+</div>
+</body>
+</html>
+"""))
+
+
+def cmd_report(dir_path: str, output: str = None):
+    """生成 HTML 项目报告"""
+    root = pathlib.Path(dir_path)
+    if not root.exists():
+        print(f"❌ 目录不存在：{dir_path}")
+        return
+
+    # 收集度量数据
+    metrics_data = cmd_metrics(dir_path)
+    if not metrics_data:
+        return
+
+    # 检查构建日志
+    log_data = None
+    build_log = root / "build" / "build.log"
+    if build_log.exists():
+        log_data = cmd_log(str(build_log))
+
+    # 构建 HTML
+    total = metrics_data["total"]
+
+    # 度量卡片
+    stats_html = '<div class="stat-grid">'
+    for key, label in [
+        ("total_lines", "总行数"), ("code_lines", "代码行"),
+        ("functions", "函数数"), ("classes", "类数量"),
+        ("todos", "TODO/FIXME"), ("complexity", "分支复杂度"),
+    ]:
+        val = total.get(key, 0)
+        color = "#fff"
+        if key == "todos" and val > 0:
+            color = "var(--orange)"
+        stats_html += f'<div class="stat-item"><div class="stat-num" style="color:{color}">{val}</div><div class="stat-label">{label}</div></div>'
+    stats_html += '</div>'
+
+    metrics_section = f'<h2>📈 代码度量</h2><div class="card">{stats_html}</div>'
+
+    # 日志分析
+    log_section = ""
+    if log_data:
+        log_section = '<h2>🔧 构建日志</h2>'
+        if log_data["errors"] > 0:
+            log_section += f'<div class="card"><div class="stat-grid"><div class="stat-item"><div class="stat-num" style="color:var(--red)">{log_data["errors"]}</div><div class="stat-label">错误</div></div><div class="stat-item"><div class="stat-num" style="color:var(--orange)">{log_data["warnings"]}</div><div class="stat-label">警告</div></div></div></div>'
+        else:
+            log_section += '<div class="card"><p class="pass">✅ 无编译错误</p></div>'
+
+    # 文件列表
+    file_section = '<h2>📁 文件统计</h2><div class="card"><table><tr><th>文件</th><th>行数</th><th>函数</th><th>类</th><th>TODO</th></tr>'
+    for m in metrics_data["per_file"]:
+        todo_color = "var(--orange)" if m["todos"] > 0 else "var(--muted)"
+        file_section += f'<tr><td>{m["path"]}</td><td>{m["total_lines"]}</td><td>{m["functions"]}</td><td>{m["classes"]}</td><td style="color:{todo_color}">{m["todos"]}</td></tr>'
+    file_section += '</table></div>'
+
+    html = HTML_REPORT_TEMPLATE.substitute(
+        name=root.name,
+        timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        metrics_section=metrics_section,
+        log_section=log_section,
+        file_section=file_section,
+    )
+
+    # 输出
+    if output:
+        out_path = pathlib.Path(output)
+    else:
+        out_path = root / "project_report.html"
+
+    out_path.write_text(html, encoding="utf-8")
+    print(f"\n✅ 报告已生成：{out_path}")
+
+
+# ============================================================
+# 演示模式
+# ============================================================
+
+def run_demo():
+    """综合演示——不需要真实项目"""
+    print("=" * 60)
+    print("🔧 cpp_toolchain.py 演示模式")
+    print("=" * 60)
+
+    tmp = pathlib.Path(tempfile.mkdtemp())
+    project_name = "demo_project"
+
+    # 1. init
+    print("\n--- Step 1: init（项目脚手架） ---")
+    cmd_init(project_name, str(tmp), version="1.0.0", cxx_std="20")
+
+    # 2. gen
+    print("\n--- Step 2: gen（代码生成） ---")
+    spec = {
+        "namespace": "demo",
+        "classes": [
+            {
+                "name": "Server",
+                "fields": [
+                    {"name": "port", "type": "int", "default": "8080"},
+                    {"name": "host", "type": "std::string", "default": "\"localhost\""},
+                    {"name": "maxConn", "type": "int", "default": "100"},
+                ],
+                "methods": ["toString", "validate"]
+            }
+        ]
+    }
+    spec_path = tmp / project_name / "scripts" / "class_spec.json"
+    spec_path.write_text(json.dumps(spec, indent=2), encoding="utf-8")
+    cmd_gen(str(spec_path), str(tmp / project_name / "include"))
+
+    # 3. metrics
+    print("\n--- Step 3: metrics（代码度量） ---")
+    cmd_metrics(str(tmp / project_name))
+
+    # 4. report
+    print("\n--- Step 4: report（生成报告） ---")
+    cmd_report(str(tmp / project_name), str(tmp / project_name / "project_report.html"))
+
+    # 清理
+    shutil.rmtree(tmp)
+    print("\n✅ 演示完成（临时目录已清理）")
+
+
+# ============================================================
+# 主入口
+# ============================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="C++ 项目综合工具链",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=textwrap.dedent("""\
+            子命令：
+              init    创建 C++ 项目骨架
+              gen     从 JSON 规范生成 C++ 类
+              build   配置驱动的增量构建
+              metrics 代码度量分析
+              log     构建日志解析
+              report  生成 HTML 项目报告
+
+            示例：
+              python cpp_toolchain.py --demo
+              python cpp_toolchain.py init --name my_app --dir ./projects
+              python cpp_toolchain.py gen --spec spec.json
+              python cpp_toolchain.py metrics --dir ./src
+        """)
+    )
+    parser.add_argument("--demo", action="store_true", help="运行演示模式")
+
+    subparsers = parser.add_subparsers(dest="command", help="子命令")
+
+    # init
+    p_init = subparsers.add_parser("init", help="创建项目骨架")
+    p_init.add_argument("--name", required=True, help="项目名称")
+    p_init.add_argument("--dir", default=".", help="输出目录")
+    p_init.add_argument("--version", default="0.1.0", help="版本号")
+    p_init.add_argument("--cxx-std", default="17", help="C++ 标准（14/17/20）")
+
+    # gen
+    p_gen = subparsers.add_parser("gen", help="代码生成")
+    p_gen.add_argument("--spec", required=True, help="JSON 规范文件路径")
+    p_gen.add_argument("--output", default=None, help="输出目录")
+
+    # build
+    p_build = subparsers.add_parser("build", help="增量构建")
+    p_build.add_argument("--config", required=True, help="构建配置文件路径")
+    p_build.add_argument("--force", action="store_true", help="强制全量构建")
+    p_build.add_argument("--jobs", type=int, default=4, help="并行任务数")
+
+    # metrics
+    p_metrics = subparsers.add_parser("metrics", help="代码度量")
+    p_metrics.add_argument("--dir", required=True, help="源代码目录")
+    p_metrics.add_argument("--ext", nargs="+", default=["*.cpp", "*.h"], help="文件扩展名")
+
+    # log
+    p_log = subparsers.add_parser("log", help="构建日志解析")
+    p_log.add_argument("--file", required=True, help="日志文件路径")
+
+    # report
+    p_report = subparsers.add_parser("report", help="生成项目报告")
+    p_report.add_argument("--dir", required=True, help="项目目录")
+    p_report.add_argument("--output", default=None, help="报告输出路径")
+
+    args = parser.parse_args()
+
+    if args.demo:
+        run_demo()
+        return
+
+    if args.command == "init":
+        cmd_init(args.name, args.dir, args.version, args.cxx_std)
+    elif args.command == "gen":
+        cmd_gen(args.spec, args.output)
+    elif args.command == "build":
+        cmd_build(args.config, args.force, args.jobs)
+    elif args.command == "metrics":
+        cmd_metrics(args.dir, args.ext)
+    elif args.command == "log":
+        cmd_log(args.file)
+    elif args.command == "report":
+        cmd_report(args.dir, args.output)
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,42 @@
+{
+  "workspace": ".",
+  "build_root": "build",
+  "build_type": "Release",
+  "generator": null,
+  "parallel": 0,
+  "projects": [
+    {
+      "name": "myapp_core",
+      "src": "src/core",
+      "deps": [],
+      "skip": false,
+      "build_type": "Release",
+      "extra_cmake_args": []
+    },
+    {
+      "name": "myapp_plugins",
+      "src": "src/plugins",
+      "deps": [
+        "myapp_core"
+      ],
+      "skip": false,
+      "build_type": "Release",
+      "extra_cmake_args": [
+        "-DBUILD_PLUGINS=ON"
+      ]
+    },
+    {
+      "name": "tests",
+      "src": "tests",
+      "deps": [
+        "myapp_core",
+        "gtest_main"
+      ],
+      "skip": false,
+      "build_type": "Debug",
+      "extra_cmake_args": [
+        "-DBUILD_TESTING=ON"
+      ]
+    }
+  ]
+}

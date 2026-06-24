@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 11 — Python 一行命令与内置服务</title>
+<style>
+:root{--bg:#0f1117;--surface:#161822;--card:#1c1f2e;--border:#2a2d3e;--fg:#e4e6f0;--muted:#8b8fa3;--accent:#4fc3f7;--green:#66bb6a;--orange:#ffa726;--yellow:#ffee58;--red:#ef5350;--purple:#c792ea;--code-bg:#12131a}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--fg);line-height:1.8}
+
+/* ===== HERO ===== */
+.hero{background:linear-gradient(135deg,#1a1c2e 0%,#0f1117 60%,#13111f 100%);border-bottom:1px solid var(--border);padding:56px 24px 40px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-80px;left:-80px;width:320px;height:320px;background:radial-gradient(circle,rgba(79,195,247,0.07) 0%,transparent 70%)}
+.hero::after{content:'';position:absolute;bottom:-60px;right:-60px;width:260px;height:260px;background:radial-gradient(circle,rgba(102,187,106,0.09) 0%,transparent 70%)}
+.hero .badge{display:inline-block;background:rgba(102,187,106,0.15);border:1px solid rgba(102,187,106,0.4);color:var(--green);font-size:11px;font-weight:700;letter-spacing:1.5px;padding:4px 14px;border-radius:20px;margin-bottom:14px;text-transform:uppercase}
+.hero h1{font-size:clamp(26px,5vw,42px);font-weight:800;color:#fff;line-height:1.2;margin-bottom:12px}
+.hero h1 .hl{color:var(--yellow)}
+.hero h1 .hl2{color:var(--green)}
+.hero p{color:var(--muted);font-size:15px;max-width:560px;margin:0 auto}
+.hero .cmd-demo{display:inline-block;background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:8px 20px;margin-top:18px;font-family:'Fira Code','Consolas',monospace;font-size:15px;color:var(--green)}
+.hero .cmd-demo .dollar{color:var(--muted)}
+
+/* ===== LAYOUT ===== */
+.container{max-width:860px;margin:0 auto;padding:40px 24px 80px}
+h2{font-size:22px;color:#fff;margin:40px 0 16px;border-bottom:1px solid var(--border);padding-bottom:8px;display:flex;align-items:center;gap:10px}
+h2 .h2-tag{font-size:11px;background:rgba(79,195,247,0.12);border:1px solid rgba(79,195,247,0.25);color:var(--accent);padding:2px 10px;border-radius:12px;font-weight:600;letter-spacing:.5px;white-space:nowrap}
+h3{font-size:16px;color:var(--accent);margin:22px 0 10px}
+p{margin-bottom:14px;color:var(--fg)}
+a{color:var(--accent)}
+
+/* ===== CODE BLOCKS ===== */
+.code-block{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:14px 0;overflow-x:auto;font-size:13px;line-height:1.7;position:relative}
+.code-block .label{font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.label.cmd{color:var(--green)}.label.cmd .dot{background:var(--green)}
+.label.py{color:var(--yellow)}.label.py .dot{background:var(--yellow)}
+.label.out{color:var(--muted)}.label.out .dot{background:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+pre{margin:0;white-space:pre;font-family:'Fira Code','Consolas','Courier New',monospace}
+.cm{color:#6a6d83}.kw{color:#c792ea}.st{color:#c3e88d}.nm{color:#f78c6c}.ty{color:#ffcb6b}.fn{color:#82aaff}.op{color:#89ddff}.gr{color:#66bb6a}
+
+/* ===== COMPARE ===== */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+@media(max-width:600px){.compare{grid-template-columns:1fr}}
+.compare .side{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow-x:auto}
+.side.cpp .side-label{color:var(--accent)}.side.cpp .dot{background:var(--accent)}
+.side.py  .side-label{color:var(--yellow)}.side.py  .dot{background:var(--yellow)}
+.side-label{font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+
+/* ===== TIP / WARN / SUCCESS ===== */
+.tip{background:rgba(79,195,247,0.07);border:1px solid rgba(79,195,247,0.2);border-radius:8px;padding:14px 18px;margin:14px 0;font-size:14px}
+.tip::before{content:'💡 ';color:var(--accent)}
+.warn{background:rgba(255,167,38,0.07);border:1px solid rgba(255,167,38,0.2);border-radius:8px;padding:14px 18px;margin:14px 0;font-size:14px}
+.warn::before{content:'⚠️ ';color:var(--orange)}
+.success{background:rgba(102,187,106,0.07);border:1px solid rgba(102,187,106,0.2);border-radius:8px;padding:14px 18px;margin:14px 0;font-size:14px}
+.success::before{content:'✅ ';color:var(--green)}
+
+/* ===== COMMAND CARD ===== */
+.cmd-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin:12px 0;display:flex;gap:18px;align-items:flex-start}
+.cmd-icon{font-size:28px;flex-shrink:0;margin-top:2px}
+.cmd-info h3{margin:0 0 6px;font-size:15px;color:#fff}
+.cmd-info p{margin:0;font-size:13px;color:var(--muted)}
+.cmd-info .cmd-str{display:inline-block;background:var(--code-bg);border:1px solid var(--border);border-radius:5px;padding:3px 10px;font-family:'Fira Code','Consolas',monospace;font-size:12px;color:var(--green);margin-top:6px}
+.cmd-stars{margin-left:auto;flex-shrink:0;font-size:13px;color:var(--yellow)}
+
+/* ===== TABLE ===== */
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th{background:var(--surface);color:var(--muted);text-align:left;padding:8px 14px;border-bottom:2px solid var(--border);font-size:11px;letter-spacing:1px;text-transform:uppercase}
+td{padding:8px 14px;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,0.02)}
+.hl-green{color:var(--green)}.hl-yellow{color:var(--yellow)}.hl-accent{color:var(--accent)}.hl-red{color:var(--red)}
+
+/* ===== CHAPTERS ===== */
+.chapters{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin:24px 0}
+.chapters h3{font-size:15px;color:var(--fg);margin-bottom:12px}
+.ch-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+@media(max-width:500px){.ch-grid{grid-template-columns:1fr}}
+.ch-item{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surface);border-radius:6px;cursor:pointer;font-size:13px;color:var(--fg);transition:.15s}
+.ch-item:hover{background:rgba(79,195,247,0.08);color:var(--accent)}
+.ch-n{width:22px;height:22px;border-radius:5px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0}
+.ch-item:hover .ch-n{background:rgba(79,195,247,0.15);color:var(--accent)}
+.ch-tag{font-size:10px;background:rgba(79,195,247,0.1);color:var(--accent);border:1px solid rgba(79,195,247,0.2);padding:1px 7px;border-radius:10px;margin-left:auto;white-space:nowrap}
+.ch-tag.green{background:rgba(102,187,106,0.1);color:var(--green);border-color:rgba(102,187,106,0.2)}
+
+/* ===== NAV ===== */
+.nav-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 20px;margin:24px 0;display:flex;justify-content:space-between;align-items:center}
+.nav-bar a{color:var(--accent);font-size:14px;text-decoration:none;font-weight:600}
+.new-badge{display:inline-block;background:rgba(102,187,106,0.15);border:1px solid rgba(102,187,106,0.3);color:var(--green);font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:1px}
+.footer{text-align:center;padding:32px 24px;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">🔧 实用技巧 · Day 11</div>
+  <h1><span class="hl">python -m xxx</span> —— <span class="hl2">不写脚本也能干活</span></h1>
+  <p>一行命令解决日常问题：HTTP 文件传输、JSON 格式化、哈希校验、二进制解析……</p>
+  <div class="cmd-demo"><span class="dollar">$ </span>python -m http.server 8080</div>
+</div>
+
+<div class="container">
+
+<div class="nav-bar">
+  <a href="../index.html">← 返回目录</a>
+  <span class="new-badge">⚡ 实用技巧新系列</span>
+  <span style="color:var(--muted);font-size:13px">Day 11</span>
+</div>
+
+<!-- ===== CHAPTERS ===== -->
+<div class="chapters">
+  <h3>📖 本章内容</h3>
+  <div class="ch-grid">
+    <div class="ch-item" onclick="go('s1')"><div class="ch-n">1</div>http.server 临时 HTTP 服务<div class="ch-tag green">⭐⭐⭐⭐⭐</div></div>
+    <div class="ch-item" onclick="go('s2')"><div class="ch-n">2</div>json.tool JSON 格式化校验<div class="ch-tag green">⭐⭐⭐⭐⭐</div></div>
+    <div class="ch-item" onclick="go('s3')"><div class="ch-n">3</div>zipfile 压缩与解压<div class="ch-tag">⭐⭐⭐⭐</div></div>
+    <div class="ch-item" onclick="go('s4')"><div class="ch-n">4</div>base64 编码解码<div class="ch-tag">⭐⭐⭐⭐</div></div>
+    <div class="ch-item" onclick="go('s5')"><div class="ch-n">5</div>hashlib 文件哈希校验<div class="ch-tag">⭐⭐⭐⭐</div></div>
+    <div class="ch-item" onclick="go('s6')"><div class="ch-n">6</div>struct 二进制数据解析<div class="ch-tag">⭐⭐⭐⭐</div></div>
+    <div class="ch-item" onclick="go('s7')"><div class="ch-n">7</div>python -c 一行代码技巧<div class="ch-tag green">⭐⭐⭐⭐⭐</div></div>
+    <div class="ch-item" onclick="go('s8')"><div class="ch-n">8</div>timeit / profile 性能分析<div class="ch-tag">⭐⭐⭐⭐</div></div>
+    <div class="ch-item" onclick="go('s9')"><div class="ch-n">9</div>pdb 调试器<div class="ch-tag">⭐⭐⭐⭐</div></div>
+    <div class="ch-item" onclick="go('s10')"><div class="ch-n">10</div>完整命令速查表<div class="ch-tag green">全览</div></div>
+  </div>
+</div>
+
+<!-- ==================== 1. http.server ==================== -->
+<h2 id="s1">1. python -m http.server<span class="h2-tag">文件传输神器</span></h2>
+
+<p>局域网传文件、本地调试 HTML、CI 分享构建产物——<strong>这一条命令解决 80% 的临时分享需求</strong>。C++ 要做同样的事需要搭建 Boost.Beast 服务器，Python 一行搞定。</p>
+
+<div class="code-block">
+<div class="label cmd"><span class="dot"></span>终端命令</div>
+<pre><span class="cm"># 最基本：8000 端口，共享当前目录</span>
+python -m http.server
+
+<span class="cm"># 指定端口</span>
+python -m http.server 8080
+
+<span class="cm"># 指定目录（Python 3.7+）</span>
+python -m http.server 3000 -d /path/to/share
+
+<span class="cm"># 只允许本机访问（更安全）</span>
+python -m http.server 8000 --bind 127.0.0.1
+
+<span class="cm"># 远程访问：同事在浏览器输入</span>
+<span class="cm"># http://192.168.1.100:8000</span></pre>
+</div>
+
+<div class="compare">
+<div class="side cpp">
+<div class="side-label"><span class="dot"></span>C++ 实现 HTTP 服务</div>
+<pre><span class="cm">// 需要 cpp-httplib 第三方库</span>
+<span class="cm">// CMakeLists.txt 配置、编译...</span>
+<span class="kw">#include</span> <span class="st">"httplib.h"</span>
+
+<span class="kw">int</span> <span class="fn">main</span>() {
+  httplib::Server svr;
+  svr.set_mount_point(<span class="st">"/"</span>, <span class="st">"."</span>);
+  svr.listen(<span class="st">"0.0.0.0"</span>, <span class="nm">8080</span>);
+}
+
+<span class="cm">// 还需手动安装库、写 CMake...</span></pre>
+</div>
+<div class="side py">
+<div class="side-label"><span class="dot"></span>Python 一行搞定</div>
+<pre><span class="cm"># 命令行：直接用，不写代码</span>
+<span class="cm"># python -m http.server 8080</span>
+
+<span class="cm"># 或者在代码中启动：</span>
+<span class="kw">from</span> http.server <span class="kw">import</span> (
+    HTTPServer,
+    SimpleHTTPRequestHandler
+)
+server = HTTPServer(
+    (<span class="st">'0.0.0.0'</span>, <span class="nm">8080</span>),
+    SimpleHTTPRequestHandler
+)
+server.serve_forever()
+<span class="cm"># 标准库，零依赖</span></pre>
+</div>
+</div>
+
+<h3>如何快速获取本机 IP（告知同事）</h3>
+<div class="code-block">
+<div class="label py"><span class="dot"></span>PYTHON</div>
+<pre><span class="kw">import</span> socket
+
+<span class="cm"># 方法1：连接外网选路（最可靠）</span>
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect((<span class="st">"8.8.8.8"</span>, <span class="nm">80</span>))
+ip = s.getsockname()[<span class="nm">0</span>]  <span class="cm"># → "192.168.1.100"</span>
+s.close()
+
+<span class="cm"># 一行版本（python -c）</span>
+<span class="cm"># python -c "import socket; s=socket.socket(); s.connect(('8.8.8.8',80)); print(s.getsockname()[0])"</span></pre>
+</div>
+
+<div class="success">
+<strong>配套工具</strong>：本 Day 提供 <code>quick_server.py</code>，比 <code>-m http.server</code> 更强——自动显示 IP、支持文件上传、深色主题目录页、彩色访问日志、CORS 支持。<br>
+<code>python quick_server.py 8080 --upload --open</code>
+</div>
+
+<h3>实战场景</h3>
+<table>
+<tr><th>场景</th><th>命令</th></tr>
+<tr><td>同事来取文件</td><td><code>python -m http.server 8000</code> → 告知 IP</td></tr>
+<tr><td>手机下载电脑文件</td><td>同上，手机浏览器访问局域网 IP</td></tr>
+<tr><td>本地调试前端 HTML</td><td><code>python -m http.server 3000 -d ./dist</code></td></tr>
+<tr><td>CI 临时提供下载</td><td><code>python -m http.server --bind 0.0.0.0 9999</code></td></tr>
+<tr><td>需要文件上传</td><td><code>python quick_server.py --upload</code></td></tr>
+</table>
+
+<!-- ==================== 2. json.tool ==================== -->
+<h2 id="s2">2. python -m json.tool<span class="h2-tag">JSON 格式化&amp;校验</span></h2>
+
+<p>C++ 项目中到处是 JSON：CMake preset、编译数据库 <code>compile_commands.json</code>、REST API 返回值。<code>json.tool</code> 是最快的格式化+校验方式，不需要装 jq。</p>
+
+<div class="code-block">
+<div class="label cmd"><span class="dot"></span>终端命令</div>
+<pre><span class="cm"># 格式化 JSON 文件</span>
+python -m json.tool compile_commands.json
+
+<span class="cm"># 格式化并保存</span>
+python -m json.tool ugly.json pretty.json
+
+<span class="cm"># 管道输入（curl 返回值格式化）</span>
+curl -s https://api.example.com/status | python -m json.tool
+
+<span class="cm"># 紧凑输出（Python 3.9+）</span>
+python -m json.tool --compact data.json
+
+<span class="cm"># 排序键名</span>
+python -m json.tool --sort-keys data.json
+
+<span class="cm"># 输出无效 JSON 时会报错</span>
+echo "{bad json}" | python -m json.tool
+<span class="cm"># → json.decoder.JSONDecodeError: Expecting property name...</span></pre>
+</div>
+
+<div class="code-block">
+<div class="label py"><span class="dot"></span>PYTHON 代码等效实现</div>
+<pre><span class="kw">import</span> json, sys
+
+<span class="cm"># 读取 → 格式化输出</span>
+data = json.loads(sys.stdin.read())
+print(json.dumps(data, indent=<span class="nm">2</span>, ensure_ascii=<span class="kw">False</span>))
+
+<span class="cm"># 常用选项：</span>
+<span class="cm"># indent=2 / 4   → 缩进</span>
+<span class="cm"># sort_keys=True → 键名排序</span>
+<span class="cm"># ensure_ascii=False → 中文不转义</span></pre>
+</div>
+
+<div class="tip">
+<strong>C++ 开发中的具体用途</strong>：<code>compile_commands.json</code> 是 Clang 工具链分析项目的基础文件，用这个命令可以快速检查 CMake 生成的内容是否正确，或者提取指定文件的编译选项。
+</div>
+
+<!-- ==================== 3. zipfile ==================== -->
+<h2 id="s3">3. python -m zipfile<span class="h2-tag">无需安装的解压缩</span></h2>
+
+<div class="code-block">
+<div class="label cmd"><span class="dot"></span>终端命令</div>
+<pre><span class="cm"># 列出 ZIP 内容</span>
+python -m zipfile -l archive.zip
+
+<span class="cm"># 解压到目录</span>
+python -m zipfile -e archive.zip ./output/
+
+<span class="cm"># 创建压缩包</span>
+python -m zipfile -c output.zip file1.cpp file2.h include/
+
+<span class="cm"># 测试完整性</span>
+python -m zipfile -t archive.zip</pre>
+</div>
+
+<div class="code-block">
+<div class="label py"><span class="dot"></span>PYTHON 代码 — 更灵活的压缩控制</div>
+<pre><span class="kw">import</span> zipfile, pathlib
+
+<span class="cm"># 创建压缩包（代码方式，可精确控制）</span>
+<span class="kw">with</span> zipfile.ZipFile(<span class="st">"release.zip"</span>, <span class="st">"w"</span>, zipfile.ZIP_DEFLATED) <span class="kw">as</span> zf:
+    <span class="cm"># 直接写入字符串（不需要先创建文件）</span>
+    zf.writestr(<span class="st">"README.md"</span>, <span class="st">"# My Project\n"</span>)
+    
+    <span class="cm"># 批量添加 include/ 目录</span>
+    <span class="kw">for</span> h <span class="kw">in</span> pathlib.Path(<span class="st">"include"</span>).rglob(<span class="st">"*.h"</span>):
+        zf.write(h)  <span class="cm"># 保留相对路径结构</span>
+
+<span class="cm"># 解压时按需过滤</span>
+<span class="kw">with</span> zipfile.ZipFile(<span class="st">"archive.zip"</span>, <span class="st">"r"</span>) <span class="kw">as</span> zf:
+    <span class="cm"># 只解压头文件</span>
+    headers = [n <span class="kw">for</span> n <span class="kw">in</span> zf.namelist() <span class="kw">if</span> n.endswith(<span class="st">".h"</span>)]
+    zf.extractall(<span class="st">"./include"</span>, members=headers)</pre>
+</div>
+
+<div class="tip">
+<strong>对比 C++ 的思维</strong>：<code>zf.writestr()</code> 可以直接写入内存字符串，不需要先把文件写到磁盘——这在生成分发包时非常方便（生成 <code>CMakeLists.txt</code> + 源码 → 打包 → 一步到位）。
+</div>
+
+<!-- ==================== 4. base64 ==================== -->
+<h2 id="s4">4. python -m base64<span class="h2-tag">编码解码</span></h2>
+
+<div class="code-block">
+<div class="label cmd"><span class="dot"></span>终端命令</div>
+<pre><span class="cm"># 编码（输出到终端）</span>
+echo -n "user:password" | python -m base64
+
+<span class="cm"># 解码（-d 标志）</span>
+echo "dXNlcjpwYXNzd29yZA==" | python -m base64 -d
+
+<span class="cm"># 编码文件</span>
+python -m base64 -e binary_key.bin
+
+<span class="cm"># 解码文件</span>
+python -m base64 -d encoded.txt > output.bin</pre>
+</div>
+
+<div class="code-block">
+<div class="label py"><span class="dot"></span>PYTHON 代码</div>
+<pre><span class="kw">import</span> base64
+
+<span class="cm"># 标准 Base64</span>
+encoded = base64.b64encode(<span class="st">b"C++ Binary Data"</span>).decode(<span class="st">"ascii"</span>)
+decoded = base64.b64decode(encoded)
+
+<span class="cm"># URL-safe Base64（用于 URL/文件名，无 +/ 字符）</span>
+url_encoded = base64.urlsafe_b64encode(<span class="st">b"data"</span>)
+
+<span class="cm"># HTTP Basic Auth 头（C++ REST 客户端常用）</span>
+creds = base64.b64encode(<span class="st">b"admin:secret"</span>).decode()
+auth_header = f<span class="st">"Authorization: Basic {creds}"</span>
+
+<span class="cm"># 内嵌图片到 HTML（data URI）</span>
+img_b64 = base64.b64encode(pathlib.Path(<span class="st">"logo.png"</span>).read_bytes()).decode()
+data_uri = f<span class="st">"data:image/png;base64,{img_b64}"</span></pre>
+</div>
+
+<!-- ==================== 5. hashlib ==================== -->
+<h2 id="s5">5. python -m hashlib<span class="h2-tag">文件哈希校验</span></h2>
+
+<p>下载 C++ SDK、第三方库、预编译二进制时，官网通常会给出 MD5/SHA256。Python 一行校验。</p>
+
+<div class="code-block">
+<div class="label cmd"><span class="dot"></span>终端命令（Python 3.9+）</div>
+<pre><span class="cm"># SHA256（推荐）</span>
+python -m hashlib -a sha256 boost_1_85_0.tar.bz2
+
+<span class="cm"># MD5</span>
+python -m hashlib -a md5 file.bin
+
+<span class="cm"># 对比官网公布的哈希</span>
+python -m hashlib -a sha256 file.bin
+<span class="cm"># → sha256: e3b0c44298fc1c149...（与官网对比）</span></pre>
+</div>
+
+<div class="code-block">
+<div class="label py"><span class="dot"></span>PYTHON 代码 — 所有版本可用</div>
+<pre><span class="kw">import</span> hashlib, pathlib
+
+<span class="kw">def</span> <span class="fn">verify_file</span>(filepath: str, expected_sha256: str) -> <span class="ty">bool</span>:
+    <span class="st">"""校验文件 SHA256（下载完整性验证）"""</span>
+    h = hashlib.sha256()
+    <span class="cm"># 分块读取，避免大文件占满内存</span>
+    <span class="kw">with</span> open(filepath, <span class="st">"rb"</span>) <span class="kw">as</span> f:
+        <span class="kw">for</span> chunk <span class="kw">in</span> iter(<span class="kw">lambda</span>: f.read(<span class="nm">65536</span>), <span class="st">b""</span>):
+            h.update(chunk)
+    actual = h.hexdigest()
+    ok = actual == expected_sha256.lower()
+    print(f<span class="st">"{'✅' if ok else '❌'} {'OK' if ok else 'MISMATCH'}"</span>)
+    print(f<span class="st">"  期望：{expected_sha256}"</span>)
+    print(f<span class="st">"  实际：{actual}"</span>)
+    <span class="kw">return</span> ok
+
+<span class="cm"># 使用：</span>
+<span class="cm"># verify_file("boost.tar.gz", "官网公布的sha256")</span>
+
+<span class="cm"># 快速单行哈希（python -c）</span>
+<span class="cm"># python -c "import hashlib; print(hashlib.sha256(open('f','rb').read()).hexdigest())"</span></pre>
+</div>
+
+<!-- ==================== 6. struct ==================== -->
+<h2 id="s6">6. struct 模块<span class="h2-tag">二进制数据解析</span></h2>
+
+<p>C++ 开发必然遇到二进制协议：网络包、文件格式头、序列化数据。Python <code>struct</code> 模块比 C++ 的 <code>reinterpret_cast</code> 更安全，不会越界。</p>
+
+<div class="compare">
+<div class="side cpp">
+<div class="side-label"><span class="dot"></span>C++ 解析二进制头</div>
+<pre><span class="cm">// 结构体直接 cast（危险）</span>
+<span class="kw">struct</span> <span class="ty">Header</span> {
+    <span class="kw">char</span>     magic[<span class="nm">4</span>];
+    <span class="kw">uint16_t</span> version;
+    <span class="kw">uint8_t</span>  flags;
+    <span class="kw">uint32_t</span> size;
+};
+<span class="kw">auto</span>* hdr = <span class="kw">reinterpret_cast</span>
+    &lt;Header*&gt;(buffer);
+<span class="cm">// 需要注意字节序、对齐...</span></pre>
+</div>
+<div class="side py">
+<div class="side-label"><span class="dot"></span>Python struct 安全解析</div>
+<pre><span class="kw">import</span> struct
+
+fmt = <span class="st">'&gt;4sHBI'</span>
+<span class="cm"># > = big-endian</span>
+<span class="cm"># 4s = char[4]</span>
+<span class="cm"># H = uint16, B = uint8</span>
+<span class="cm"># I = uint32</span>
+result = struct.unpack(fmt, buf)
+magic, ver, flags, size = result
+<span class="cm"># 自动处理字节序</span></pre>
+</div>
+</div>
+
+<div class="code-block">
+<div class="label py"><span class="dot"></span>PYTHON — 常用格式字符</div>
+<pre><span class="cm"># 字节序前缀</span>
+<span class="st">'>'</span>  <span class="cm"># big-endian（网络协议）</span>
+<span class="st">'<'</span>  <span class="cm"># little-endian（x86/x64）</span>
+<span class="st">'!'</span>  <span class="cm"># network（= big-endian）</span>
+<span class="st">'@'</span>  <span class="cm"># native（本机默认）</span>
+
+<span class="cm"># 基本类型</span>
+<span class="st">'b'</span>/<span class="st">'B'</span>  <span class="cm"># int8 / uint8   (1 byte)</span>
+<span class="st">'h'</span>/<span class="st">'H'</span>  <span class="cm"># int16 / uint16 (2 bytes)</span>
+<span class="st">'i'</span>/<span class="st">'I'</span>  <span class="cm"># int32 / uint32 (4 bytes)</span>
+<span class="st">'q'</span>/<span class="st">'Q'</span>  <span class="cm"># int64 / uint64 (8 bytes)</span>
+<span class="st">'f'</span>     <span class="cm"># float32        (4 bytes)</span>
+<span class="st">'d'</span>     <span class="cm"># float64        (8 bytes)</span>
+<span class="st">'4s'</span>    <span class="cm"># char[4]        (4 bytes)</span>
+<span class="st">'x'</span>     <span class="cm"># 填充字节（跳过）</span>
+
+<span class="cm"># 实用：解析 PNG 文件头（前8字节）</span>
+<span class="kw">with</span> open(<span class="st">"image.png"</span>, <span class="st">"rb"</span>) <span class="kw">as</span> f:
+    sig = struct.unpack(<span class="st">'8B'</span>, f.read(<span class="nm">8</span>))
+    is_png = sig[:4] == (<span class="nm">137</span>, <span class="nm">80</span>, <span class="nm">78</span>, <span class="nm">71</span>)
+    print(<span class="st">"✅ PNG"</span> <span class="kw">if</span> is_png <span class="kw">else</span> <span class="st">"❌ 非PNG"</span>)</pre>
+</div>
+
+<!-- ==================== 7. python -c ==================== -->
+<h2 id="s7">7. python -c<span class="h2-tag">一行代码技巧</span></h2>
+
+<p>不想写脚本文件时的终极武器，C++ 开发者几乎每天都会用到。</p>
+
+<div class="code-block">
+<div class="label cmd"><span class="dot"></span>日常高频一行代码</div>
+<pre><span class="cm"># 快速数学计算（比 bc 好用）</span>
+python -c "print(2**32)"
+python -c "print(0xFF & 0xAB)"
+python -c "print(1024*1024*1024, 'bytes =', 1024**3 // 10**6, 'MB')"
+
+<span class="cm"># 获取本机 IP</span>
+python -c "import socket; s=socket.socket(); s.connect(('8.8.8.8',80)); print(s.getsockname()[0])"
+
+<span class="cm"># 端口检测</span>
+python -c "import socket; r=socket.socket().connect_ex(('localhost',8080)); print('open' if r==0 else 'closed')"
+
+<span class="cm"># 当前时间戳</span>
+python -c "import time; print(int(time.time()))"
+
+<span class="cm"># 文件 SHA256（所有版本）</span>
+python -c "import hashlib; print(hashlib.sha256(open('file','rb').read()).hexdigest())"
+
+<span class="cm"># 十六进制 ↔ 十进制</span>
+python -c "print(hex(255))"
+python -c "print(int('0xff', 16))"
+
+<span class="cm"># 格式化 JSON 字符串</span>
+python -c "import json,sys; print(json.dumps(json.loads(sys.stdin.read()),indent=2))"
+
+<span class="cm"># 查找端口占用</span>
+python -c "import socket; [print(p, socket.socket().connect_ex(('localhost',p))) for p in [8000,8080,3000,5000]]"
+
+<span class="cm"># URL 编解码</span>
+python -c "from urllib.parse import quote; print(quote('C++ /path?a=1&b=2'))"
+python -c "from urllib.parse import unquote; print(unquote('C%2B%2B%20test'))"
+
+<span class="cm"># 生成随机密码</span>
+python -c "import secrets,string; print(secrets.token_urlsafe(16))"
+
+<span class="cm"># UUID 生成</span>
+python -c "import uuid; print(uuid.uuid4())"</pre>
+</div>
+
+<div class="tip">
+<strong>Windows 上注意引号</strong>：Windows cmd 用双引号，PowerShell 用单引号或转义。建议在 Git Bash 或 WSL 中使用，引号行为与 Linux 一致。
+</div>
+
+<!-- ==================== 8. timeit/profile ==================== -->
+<h2 id="s8">8. python -m timeit &amp; profile<span class="h2-tag">性能分析</span></h2>
+
+<div class="code-block">
+<div class="label cmd"><span class="dot"></span>timeit — 微基准测试</div>
+<pre><span class="cm"># 测量表达式执行时间（自动重复 N 次取最小值）</span>
+python -m timeit "'-'.join(str(n) for n in range(100))"
+<span class="cm"># → 3.85 usec per loop</span>
+
+<span class="cm"># 带 setup</span>
+python -m timeit -s "import re" "re.compile('(\d+)')"
+
+<span class="cm"># 指定重复次数</span>
+python -m timeit -n 10000 "sum(range(1000))"
+
+<span class="cm"># 对比两种写法</span>
+python -m timeit "[x**2 for x in range(1000)]"
+python -m timeit "list(map(lambda x: x**2, range(1000)))"</pre>
+</div>
+
+<div class="code-block">
+<div class="label cmd"><span class="dot"></span>profile — 函数调用分析</div>
+<pre><span class="cm"># 运行脚本并分析性能热点</span>
+python -m cProfile script.py
+python -m cProfile -s cumulative script.py  <span class="cm"># 按累计时间排序</span>
+python -m cProfile -o output.prof script.py <span class="cm"># 保存到文件</span>
+
+<span class="cm"># 分析 pstats</span>
+python -c "import pstats; p=pstats.Stats('output.prof'); p.sort_stats('cumulative'); p.print_stats(10)"</pre>
+</div>
+
+<div class="compare">
+<div class="side cpp">
+<div class="side-label"><span class="dot"></span>C++ 计时方式</div>
+<pre><span class="cm">// std::chrono</span>
+<span class="kw">auto</span> start = std::chrono::
+  high_resolution_clock::now();
+
+<span class="cm">// ... 被测代码 ...</span>
+
+<span class="kw">auto</span> end = std::chrono::
+  high_resolution_clock::now();
+<span class="kw">auto</span> us = std::chrono::
+  duration_cast&lt;microseconds&gt;(
+    end - start).count();
+std::cout &lt;&lt; us &lt;&lt; <span class="st">" us\n"</span>;</pre>
+</div>
+<div class="side py">
+<div class="side-label"><span class="dot"></span>Python 计时方式</div>
+<pre><span class="kw">import</span> timeit
+
+<span class="cm"># 一行搞定</span>
+t = timeit.timeit(
+    stmt=<span class="st">"sum(range(1000))"</span>,
+    number=<span class="nm">10000</span>
+) / <span class="nm">10000</span>
+print(f<span class="st">"{t*1e6:.2f} us"</span>)
+
+<span class="cm"># 或命令行</span>
+<span class="cm"># python -m timeit "sum(range(1000))"</span></pre>
+</div>
+</div>
+
+<!-- ==================== 9. pdb ==================== -->
+<h2 id="s9">9. python -m pdb<span class="h2-tag">交互式调试器</span></h2>
+
+<div class="code-block">
+<div class="label cmd"><span class="dot"></span>pdb 基本用法</div>
+<pre><span class="cm"># 以调试模式运行脚本</span>
+python -m pdb script.py
+
+<span class="cm"># 在代码中设置断点（Python 3.7+）</span>
+breakpoint()  <span class="cm"># 比 import pdb; pdb.set_trace() 简洁</span></pre>
+</div>
+
+<div class="code-block">
+<div class="label out"><span class="dot"></span>pdb 常用命令</div>
+<pre>l / ll     → 列出当前代码（list / longlist）
+n          → 执行下一行（step over）
+s          → 进入函数（step into）
+c          → 继续运行（continue）
+q          → 退出调试
+p var      → 打印变量值
+pp var     → 格式化打印
+b 42       → 在第42行设置断点
+b func     → 在函数入口设置断点
+w          → 查看调用栈（where）
+u / d      → 上/下一帧（up/down stack frame）
+!expr      → 执行任意 Python 表达式</pre>
+</div>
+
+<table>
+<tr><th>调试方式</th><th>C++ 对应</th><th>适用场景</th></tr>
+<tr><td><code>breakpoint()</code></td><td><code>__debugbreak()</code></td><td>代码中设置软断点</td></tr>
+<tr><td><code>python -m pdb</code></td><td>gdb / lldb</td><td>命令行调试</td></tr>
+<tr><td><code>p variable</code></td><td><code>print variable</code></td><td>查看变量</td></tr>
+<tr><td><code>w</code></td><td><code>bt</code> (backtrace)</td><td>查看调用栈</td></tr>
+<tr><td><code>!expr</code></td><td>gdb 的 <code>call expr</code></td><td>即时执行表达式</td></tr>
+</table>
+
+<!-- ==================== 10. 速查表 ==================== -->
+<h2 id="s10">10. python -m 命令速查表<span class="h2-tag">完整列表</span></h2>
+
+<table>
+<tr><th>命令</th><th>用途</th><th>典型参数</th><th>实用度</th></tr>
+<tr><td><code>http.server</code></td><td>临时 HTTP 服务器</td><td><code>8080 -d /path</code></td><td class="hl-green">⭐⭐⭐⭐⭐</td></tr>
+<tr><td><code>json.tool</code></td><td>JSON 格式化&amp;校验</td><td><code>file.json</code></td><td class="hl-green">⭐⭐⭐⭐⭐</td></tr>
+<tr><td><code>pip</code></td><td>包管理</td><td><code>install / list / freeze</code></td><td class="hl-green">⭐⭐⭐⭐⭐</td></tr>
+<tr><td><code>zipfile</code></td><td>ZIP 压缩/解压</td><td><code>-l / -e / -c</code></td><td class="hl-yellow">⭐⭐⭐⭐</td></tr>
+<tr><td><code>base64</code></td><td>Base64 编解码</td><td><code>-e / -d</code></td><td class="hl-yellow">⭐⭐⭐⭐</td></tr>
+<tr><td><code>hashlib</code></td><td>文件哈希（3.9+）</td><td><code>-a sha256 file</code></td><td class="hl-yellow">⭐⭐⭐⭐</td></tr>
+<tr><td><code>timeit</code></td><td>微基准计时</td><td><code>-s setup "stmt"</code></td><td class="hl-yellow">⭐⭐⭐⭐</td></tr>
+<tr><td><code>cProfile</code></td><td>函数性能分析</td><td><code>-s cumulative</code></td><td class="hl-yellow">⭐⭐⭐⭐</td></tr>
+<tr><td><code>pdb</code></td><td>交互式调试器</td><td><code>script.py</code></td><td class="hl-yellow">⭐⭐⭐⭐</td></tr>
+<tr><td><code>trace</code></td><td>执行追踪/覆盖率</td><td><code>--trace / --count</code></td><td class="hl-accent">⭐⭐⭐</td></tr>
+<tr><td><code>calendar</code></td><td>日历查看</td><td><code>2026 / 6 2026</code></td><td class="hl-accent">⭐⭐⭐</td></tr>
+<tr><td><code>uuid</code></td><td>UUID 生成（3.9+）</td><td>（无参数）</td><td class="hl-accent">⭐⭐⭐</td></tr>
+<tr><td><code>py_compile</code></td><td>语法检查（编译为字节码）</td><td><code>script.py</code></td><td class="hl-accent">⭐⭐⭐</td></tr>
+<tr><td><code>compileall</code></td><td>批量编译目录下所有 .py</td><td><code>./src</code></td><td class="hl-accent">⭐⭐⭐</td></tr>
+<tr><td><code>tokenize</code></td><td>显示 token 流（学习用）</td><td><code>script.py</code></td><td class="hl-accent">⭐⭐</td></tr>
+<tr><td><code>dis</code></td><td>查看字节码</td><td><code>-c "sum(range(10))"</code></td><td class="hl-accent">⭐⭐</td></tr>
+<tr><td><code>this</code></td><td>Python 之禅</td><td>（无参数）</td><td class="hl-accent">😄</td></tr>
+<tr><td><code>antigravity</code></td><td>彩蛋 🛸</td><td>（无参数）</td><td class="hl-accent">😄</td></tr>
+</table>
+
+<div class="success">
+<strong>本章配套文件</strong><br>
+<code>day11_basics.py</code> — 所有演示模块（运行 <code>python day11_basics.py</code>）<br>
+<code>quick_server.py</code> — 增强版 HTTP 服务器，支持上传/CORS/自动开浏览器
+</div>
+
+<div class="nav-bar">
+  <a href="../Day10/day10_toolchain.html">← Day 10</a>
+  <span style="color:var(--muted);font-size:13px">以后每天介绍实用技巧 🚀</span>
+  <a href="../index.html">返回目录 →</a>
+</div>
+
+</div>
+
+<div class="footer">
+  <p>🚀 <strong>每日Py</strong> — Python 实用技巧系列</p>
+  <p style="margin-top:6px">Day 11: python -m xxx —— 一行命令干活</p>
+</div>
+
+<script>
+function go(id) { document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'}); }
+</script>
+</body>
+</html>

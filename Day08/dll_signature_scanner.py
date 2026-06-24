@@ -44,7 +44,7 @@ def scan_dll_exports(dll_path):
     # 方法 1: dumpbin (MSVC 自带)
     try:
         result = subprocess.run(
-            ["dumpbin", "/exports", str(dll_path)],
+            ["D:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/bin/Hostx64/x86/dumpbin", "/exports", str(dll_path)],
             capture_output=True, text=True, timeout=10
         )
         if result.returncode == 0:

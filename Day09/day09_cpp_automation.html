@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 09: C++ 项目自动化 —— CMake 辅助 &amp; 批量编译</title>
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --bg2: #282a36;
+    --bg3: #313244;
+    --fg: #cdd6f4;
+    --fg2: #a6adc8;
+    --accent: #89b4fa;
+    --accent2: #f38ba8;
+    --accent3: #a6e3a1;
+    --accent4: #fab387;
+    --accent5: #cba6f7;
+    --code-bg: #181825;
+    --border: #45475a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 {
+    color: var(--accent);
+    font-size: 2rem;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  h2 {
+    color: var(--accent3);
+    font-size: 1.5rem;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid var(--accent3);
+    padding-left: 0.8rem;
+  }
+  h3 {
+    color: var(--accent4);
+    font-size: 1.2rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.6rem;
+  }
+  h4 {
+    color: var(--accent5);
+    font-size: 1.05rem;
+    margin-top: 1rem;
+    margin-bottom: 0.4rem;
+  }
+  p, li { color: var(--fg); }
+  ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+  li { margin-bottom: 0.3rem; }
+  code {
+    background: var(--code-bg);
+    color: var(--accent3);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.95em;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 0.8rem 0 1.2rem;
+  }
+  pre code {
+    background: transparent;
+    color: var(--fg);
+    padding: 0;
+    border-radius: 0;
+    line-height: 1.55;
+  }
+  .lang-cpp   .k { color: #cba6f7; }
+  .lang-cpp   .s { color: #a6e3a1; }
+  .lang-cpp   .c { color: #6c7086; font-style: italic; }
+  .lang-cpp   .n { color: #fab387; }
+  .lang-cpp   .t { color: #89b4fa; }
+  .lang-py    .k { color: #cba6f7; }
+  .lang-py    .s { color: #a6e3a1; }
+  .lang-py    .c { color: #6c7086; font-style: italic; }
+  .lang-py    .n { color: #fab387; }
+  .lang-py    .b { color: #f38ba8; }
+  .lang-py    .f { color: #89b4fa; }
+  .lang-shell .c { color: #6c7086; font-style: italic; }
+  .lang-shell .s { color: #a6e3a1; }
+  .lang-shell .k { color: #cba6f7; }
+  .lang-shell .n { color: #fab387; }
+  .lang-cmake .k { color: #cba6f7; }
+  .lang-cmake .s { color: #a6e3a1; }
+  .lang-cmake .n { color: #fab387; }
+  .lang-cmake .c { color: #6c7086; font-style: italic; }
+  .lang-json .s { color: #a6e3a1; }
+  .lang-json .n { color: #fab387; }
+  .tip {
+    background: var(--bg3);
+    border-left: 4px solid var(--accent4);
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+  }
+  .warn {
+    background: var(--bg3);
+    border-left: 4px solid var(--accent2);
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+  }
+  .info {
+    background: var(--bg3);
+    border-left: 4px solid var(--accent);
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    background: var(--bg2);
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.8rem;
+    text-align: left;
+  }
+  th { background: var(--bg3); color: var(--accent); }
+  .toc {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .toc ul { list-style: none; margin-left: 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .badge {
+    display: inline-block;
+    background: var(--accent5);
+    color: var(--bg);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-right: 0.3rem;
+  }
+  .badge-c { background: var(--accent4); }
+  .badge-py { background: var(--accent3); }
+  .badge-cpp { background: var(--accent); }
+  .comp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
+  .comp-grid pre { margin: 0; }
+  .comp-label {
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin-bottom: 0.2rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>Day 09: C++ 项目自动化 —— CMake 辅助 &amp; 批量编译</h1>
+
+<div class="toc">
+  <h3 style="margin-top:0">目录</h3>
+  <ul>
+    <li><a href="#why">为什么要用 Python 做 C++ 项目自动化</a></li>
+    <li><a href="#filesystem">文件系统操作利器：pathlib + glob</a></li>
+    <li><a href="#cmake-parse">CMakeLists.txt 解析</a></li>
+    <li><a href="#cmake-gen">CMakeLists.txt 自动生成</a></li>
+    <li><a href="#batch-build">批量编译：subprocess 实战</a></li>
+    <li><a href="#deps">依赖检测与增量构建</a></li>
+    <li><a href="#config">构建配置管理 JSON/YAML</a></li>
+    <li><a href="#codegen">代码生成：从模板到 .h/.cpp</a></li>
+    <li><a href="#test">测试运行与结果聚合</a></li>
+    <li><a href="#tool">实战工具：C++ 项目批量化构建器</a></li>
+    <li><a href="#summary">小结与练习</a></li>
+  </ul>
+</div>
+
+<!-- ============================ 1. 为什么 ============================ -->
+<h2 id="why">为什么用 Python 做 C++ 项目自动化</h2>
+
+<p>作为 C++ 开发者，你一定遇到过这些痛点：</p>
+
+<ul>
+  <li>新增一个 <code>.cpp</code> 文件，需要手动加到 <code>CMakeLists.txt</code></li>
+  <li>多个子项目需要逐个编译、依次检查结果</li>
+  <li>编译错误分散在多个终端窗口，难以汇总</li>
+  <li>需要在不同配置（Debug/Release/x86/x64）之间反复切换</li>
+  <li>CI 脚本用 bash/bat 写到怀疑人生</li>
+</ul>
+
+<p><strong>Python 天然适合做构建脚本：</strong></p>
+
+<table>
+  <tr><th>能力</th><th>C++ / Shell 做法</th><th>Python 做法</th></tr>
+  <tr>
+    <td>遍历文件</td>
+    <td><code>find ... -exec</code> 或 <code>std::filesystem</code></td>
+    <td><code>pathlib.Path.rglob("*.cpp")</code></td>
+  </tr>
+  <tr>
+    <td>解析文本</td>
+    <td>写 parser 费劲 / awk/sed 脆弱</td>
+    <td><code>re</code> 正则，或手写行扫描</td>
+  </tr>
+  <tr>
+    <td>进程调用</td>
+    <td><code>system()</code> / <code>fork+exec</code></td>
+    <td><code>subprocess.run()</code> 直接拿输出</td>
+  </tr>
+  <tr>
+    <td>JSON/YAML 配置</td>
+    <td>第三方库或手写</td>
+    <td>标准库 <code>json</code>，或 <code>pyyaml</code></td>
+  </tr>
+  <tr>
+    <td>彩色输出</td>
+    <td>ANSI 转义码</td>
+    <td><code>rich</code> 库开箱即用</td>
+  </tr>
+  <tr>
+    <td>HTML 报告</td>
+    <td>几乎不可能</td>
+    <td><code>jinja2</code> 模板引擎</td>
+  </tr>
+  <tr>
+    <td>跨平台</td>
+    <td>Win/macOS/Linux 分别处理</td>
+    <td>一套代码到处跑</td>
+  </tr>
+</table>
+
+<div class="info">
+  <strong>核心理念：</strong>Python 不是替代 C++，而是替代 <code>bash/bat</code> 脚本和 <code>手动操作</code>。你的核心逻辑还在 C++ 里，Python 负责编排、检查和汇报。
+</div>
+
+<!-- ============================ 2. 文件系统操作 ============================ -->
+<h2 id="filesystem">文件系统操作利器：pathlib + glob</h2>
+
+<p>C++17 引入了 <code>std::filesystem</code>，Python 3.4+ 有 <code>pathlib</code>——两者理念极像，都是面向对象的路径操作。</p>
+
+<h3>C++ vs Python：文件遍历对比</h3>
+
+<div class="comp-grid">
+<div>
+  <div class="comp-label"><span class="badge badge-c">C++17</span> filesystem 遍历 .cpp</div>
+  <pre><code class="lang-cpp"><span class="c">// C++17: 递归找所有 .cpp 文件</span>
+<span class="k">#include</span> <span class="s">&lt;filesystem&gt;</span>
+<span class="k">namespace</span> fs = std::filesystem;
+
+<span class="k">for</span> (<span class="k">const auto</span>& entry :
+     fs::recursive_directory_iterator(<span class="s">"src"</span>)) {
+    <span class="k">if</span> (entry.path().extension() == <span class="s">".cpp"</span>) {
+        std::cout &lt;&lt; entry.path() &lt;&lt; <span class="s">'\n'</span>;
+    }
+}</code></pre>
+</div>
+<div>
+  <div class="comp-label"><span class="badge badge-py">Python</span> pathlib 遍历 .cpp</div>
+  <pre><code class="lang-py"><span class="c"># Python: 递归找所有 .cpp 文件</span>
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="k">for</span> f <span class="k">in</span> Path(<span class="s">"src"</span>).rglob(<span class="s">"*.cpp"</span>):
+    <span class="b">print</span>(f)</code></pre>
+</div>
+</div>
+
+<p>Python 的 <code>rglob</code> 一行搞定，比 C++ 的递归迭代器简洁太多。这正是脚本语言的威力。</p>
+
+<h3>pathlib 常用操作速查</h3>
+
+<pre><code class="lang-py"><span class="k">from</span> pathlib <span class="k">import</span> Path
+
+p = Path(<span class="s">"D:/Code/MyProject/src/main.cpp"</span>)
+
+p.name          <span class="c"># "main.cpp"</span>
+p.stem          <span class="c"># "main"          (无后缀)</span>
+p.suffix        <span class="c"># ".cpp"</span>
+p.parent        <span class="c"># Path("D:/Code/MyProject/src")</span>
+p.parents[1]    <span class="c"># Path("D:/Code/MyProject")</span>
+p.exists()      <span class="c"># True / False</span>
+p.is_file()     <span class="c"># True / False</span>
+p.stat().st_mtime  <span class="c"># 最后修改时间（时间戳）</span>
+p.stat().st_size   <span class="c"># 文件大小（字节）</span>
+
+<span class="c"># 路径拼接</span>
+header = p.parent / <span class="s">"include"</span> / <span class="s">"main.h"</span>
+
+<span class="c"># 读取/写入文本</span>
+content = p.read_text(encoding=<span class="s">"utf-8"</span>)
+p.write_text(<span class="s">"new content"</span>)
+
+<span class="c"># 创建目录（含父目录）</span>
+output_dir = Path(<span class="s">"build/Debug/x64"</span>)
+output_dir.mkdir(parents=<span class="k">True</span>, exist_ok=<span class="k">True</span>)
+
+<span class="c"># glob 通配</span>
+<span class="k">for</span> f <span class="k">in</span> Path(<span class="s">"."</span>).glob(<span class="s">"src/**/*.cpp"</span>):  <span class="c"># 等价 rglob</span>
+    <span class="b">print</span>(f)
+
+<span class="c"># 相对路径</span>
+rel = p.relative_to(Path(<span class="s">"D:/Code/MyProject"</span>))
+<span class="c"># rel == Path("src/main.cpp")</span>
+</code></pre>
+
+<h3>glob 的高级用法</h3>
+
+<pre><code class="lang-py"><span class="k">import</span> glob
+
+<span class="c"># 标准库 glob（返回字符串列表）</span>
+cpp_files = glob.glob(<span class="s">"src/**/*.cpp"</span>, recursive=<span class="k">True</span>)
+
+<span class="c"># 多扩展名同时匹配</span>
+source_files = []
+<span class="k">for</span> ext <span class="k">in</span> [<span class="s">"*.cpp"</span>, <span class="s">"*.cc"</span>, <span class="s">"*.cxx"</span>]:
+    source_files.extend(Path(<span class="s">"src"</span>).rglob(ext))
+
+<span class="c"># 排除特定目录</span>
+all_cpp = [
+    f <span class="k">for</span> f <span class="k">in</span> Path(<span class="s">"."</span>).rglob(<span class="s">"*.cpp"</span>)
+    <span class="k">if</span> <span class="s">"third_party"</span> <span class="k">not in</span> f.parts
+    <span class="k">and</span> <span class="s">"build"</span> <span class="k">not in</span> f.parts
+]
+</code></pre>
+
+<div class="tip">
+  <strong>C++ 开发者注意：</strong><code>Path.glob()</code> 返回的是生成器（lazy），不是一次性 list。和 C++ ranges 一样的思想。如果需要多次遍历，用 <code>list(Path.rglob(...))</code>。
+</div>
+
+<!-- ============================ 3. CMakeLists.txt 解析 ============================ -->
+<h2 id="cmake-parse">CMakeLists.txt 解析</h2>
+
+<p>解析 CMakeLists.txt 最常见的需求：自动发现源文件、提取目标名、识别依赖库。</p>
+
+<h3>核心思路</h3>
+
+<ol>
+  <li>逐行读取 CMakeLists.txt</li>
+  <li>用正则匹配关键命令：<code>add_executable</code>、<code>add_library</code>、<code>target_sources</code>、<code>target_link_libraries</code></li>
+  <li>处理 CMake 变量替换 <code>${VAR}</code></li>
+  <li>提取结构化信息</li>
+</ol>
+
+<h3>解析 CMakeLists.txt 实战</h3>
+
+<div class="comp-label">Python CMakeLists 解析器</div>
+<pre><code class="lang-py"><span class="k">import</span> re
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">from</span> dataclasses <span class="k">import</span> dataclass, field
+
+<span class="k">@dataclass</span>
+<span class="k">class</span> CMakeTarget:
+    name: <span class="b">str</span>
+    target_type: <span class="b">str</span>      <span class="c"># "executable" | "library"</span>
+    sources: <span class="b">list</span> = field(default_factory=<span class="b">list</span>)
+    links: <span class="b">list</span> = field(default_factory=<span class="b">list</span>)
+    includes: <span class="b">list</span> = field(default_factory=<span class="b">list</span>)
+
+<span class="k">def</span> <span class="f">parse_cmake</span>(cmake_path: Path) -> <span class="b">list</span>[CMakeTarget]:
+    <span class="s">"""解析 CMakeLists.txt，返回所有 target 信息"""</span>
+    content = cmake_path.read_text(encoding=<span class="s">"utf-8"</span>)
+
+    <span class="c"># 收集变量定义，用于替换 ${VAR}</span>
+    variables = {}
+    <span class="k">for</span> m <span class="k">in</span> re.finditer(<span class="s">r'set\s*\(\s*(\w+)\s+(.+?)\s*\)'</span>, content, re.I):
+        variables[m.group(1)] = m.group(2).strip()
+
+    <span class="k">def</span> <span class="f">subst</span>(s: <span class="b">str</span>) -> <span class="b">str</span>:
+        <span class="s">"""替换 ${VAR} 为实际值"""</span>
+        <span class="k">def</span> <span class="f">repl</span>(m):
+            <span class="k">return</span> variables.get(m.group(1), m.group(0))
+        <span class="k">return</span> re.sub(<span class="s">r'\$\{(\w+)\}'</span>, repl, s)
+
+    targets = []
+    <span class="c"># 匹配 add_executable(名称 source1 source2 ...)</span>
+    pattern = <span class="s">r'(add_executable|add_library)\s*\(\s*(\w+)\s+(.*?)\)'</span>
+    <span class="k">for</span> m <span class="k">in</span> re.finditer(pattern, content, re.DOTALL | re.I):
+        cmd, name, src_block = m.group(1), m.group(2), m.group(3)
+        <span class="c"># 按空白字符拆分源文件列表（忽略换行）</span>
+        sources = [s <span class="k">for</span> s <span class="k">in</span> re.split(<span class="s">r'\s+'</span>, src_block.strip()) <span class="k">if</span> s]
+        target_type = <span class="s">"executable"</span> <span class="k">if</span> <span class="s">"executable"</span> <span class="k">in</span> cmd <span class="k">else</span> <span class="s">"library"</span>
+        targets.append(CMakeTarget(name=name, target_type=target_type, sources=sources))
+
+    <span class="c"># 提取 target_link_libraries</span>
+    link_re = <span class="s">r'target_link_libraries\s*\(\s*(\w+)\s+(.*?)\)'</span>
+    <span class="k">for</span> m <span class="k">in</span> re.finditer(link_re, content, re.DOTALL | re.I):
+        target_name, libs_str = m.group(1), m.group(2)
+        libs = [l.strip() <span class="k">for</span> l <span class="k">in</span> re.split(<span class="s">r'\s+'</span>, libs_str.strip()) <span class="k">if</span> l]
+        <span class="k">for</span> t <span class="k">in</span> targets:
+            <span class="k">if</span> t.name == target_name:
+                <span class="c"># 删除 PUBLIC/PRIVATE/INTERFACE 关键字</span>
+                t.links = [l <span class="k">for</span> l <span class="k">in</span> libs
+                           <span class="k">if</span> l.upper() <span class="k">not in</span> (<span class="s">"PUBLIC"</span>,<span class="s">"PRIVATE"</span>,<span class="s">"INTERFACE"</span>)]
+
+    <span class="k">return</span> targets
+
+
+<span class="c"># 使用示例</span>
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    cmake_file = Path(<span class="s">"CMakeLists.txt"</span>)
+    <span class="k">if</span> cmake_file.exists():
+        <span class="k">for</span> target <span class="k">in</span> parse_cmake(cmake_file):
+            <span class="b">print</span>(<span class="s">f"[{target.target_type}] {target.name}"</span>)
+            <span class="b">print</span>(<span class="s">f"  Sources: {len(target.sources)} files"</span>)
+            <span class="b">print</span>(<span class="s">f"  Links:   {target.links}"</span>)
+            <span class="b">print</span>()</code></pre>
+
+<div class="warn">
+  <strong>局限性：</strong>这个简单解析器只能处理 <code>set()</code> / <code>add_executable()</code> / <code>add_library()</code> / <code>target_link_libraries()</code> 的基本用法。复杂的 CMake（条件判断、foreach 循环、函数调用）需要更正经的解析方案（见下文）。
+</div>
+
+<h3>更强大的方案：用 CMake 自身输出信息</h3>
+
+<p>与其费劲解析 CMakeLists.txt，不如让 CMake 自己吐出你想要的数据：</p>
+
+<pre><code class="lang-shell"><span class="c"># 获取所有 target</span>
+cmake --build build --target help
+
+<span class="c"># 获取编译命令（compile_commands.json）</span>
+cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=<span class="k">ON</span>
+
+<span class="c"># 用 cmake-file-api 查询详细信息</span>
+cmake -B build
+<span class="c"># 然后读取 build/.cmake/api/v1/reply/ 下的 JSON 文件</span></code></pre>
+
+<p>Python 读取 <code>compile_commands.json</code> 可以拿到每个文件的完整编译命令：</p>
+
+<pre><code class="lang-py"><span class="k">import</span> json
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="k">def</span> <span class="f">load_compile_commands</span>(build_dir: Path) -> <span class="b">list</span>[<span class="b">dict</span>]:
+    cc_path = build_dir / <span class="s">"compile_commands.json"</span>
+    <span class="k">if</span> <span class="k">not</span> cc_path.exists():
+        <span class="k">raise</span> <span class="b">FileNotFoundError</span>(<span class="s">f"请先配置 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"</span>)
+    <span class="k">return</span> json.loads(cc_path.read_text())
+
+<span class="c"># 获取每个文件的编译命令</span>
+commands = load_compile_commands(Path(<span class="s">"build"</span>))
+<span class="k">for</span> entry <span class="k">in</span> commands[:3]:
+    <span class="b">print</span>(<span class="s">f"文件: {entry['file']}"</span>)
+    <span class="b">print</span>(<span class="s">f"目录: {entry['directory']}"</span>)
+    <span class="b">print</span>(<span class="s">f"命令: {entry['command'][:100]}..."</span>)
+    <span class="b">print</span>()</code></pre>
+
+<div class="tip">
+  <strong>最佳实践：</strong>自动化工具优先读 <code>compile_commands.json</code> 而不是解析 CMakeLists.txt。数据更准确、更完整，而且是标准格式。
+</div>
+
+<!-- ============================ 4. CMakeLists.txt 生成 ============================ -->
+<h2 id="cmake-gen">CMakeLists.txt 自动生成</h2>
+
+<p>这才是 Python 自动化的王牌场景——根据项目目录结构自动生成 CMakeLists.txt。</p>
+
+<h3>典型场景</h3>
+
+<ul>
+  <li>新模块开发：在 <code>src/</code> 下新建目录，自动生成 CMakeLists.txt</li>
+  <li>骨架代码生成：一键生成 CMake 标准项目结构</li>
+  <li>多子项目管理：根目录自动扫描所有子目录并 <code>add_subdirectory</code></li>
+</ul>
+
+<h3>自动扫描源文件生成 CMakeLists</h3>
+
+<div class="comp-label">Python 生成 CMakeLists.txt</div>
+<pre><code class="lang-py"><span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">from</span> textwrap <span class="k">import</span> dedent
+
+<span class="k">def</span> <span class="f">generate_cmake</span>(project_name: <span class="b">str</span>,
+                      src_dir: Path,
+                      output: Path,
+                      cpp_std: <span class="b">str</span> = <span class="s">"17"</span>,
+                      deps: <span class="b">list</span>[<span class="b">str</span>] | <span class="k">None</span> = <span class="k">None</span>):
+    <span class="s">"""
+    根据 src_dir 下的源文件自动生成 CMakeLists.txt
+
+    Args:
+        project_name: 项目名
+        src_dir: 源代码目录
+        output: 输出 CMakeLists.txt 路径
+        cpp_std: C++ 标准版本
+        deps: 依赖库列表（如 ["Boost::filesystem", "fmt::fmt"]）
+    """</span>
+    <span class="k">if</span> deps <span class="k">is</span> <span class="k">None</span>:
+        deps = []
+
+    <span class="c"># 1. 扫描源文件</span>
+    cpp_files = <span class="b">sorted</span>(src_dir.rglob(<span class="s">"*.cpp"</span>))
+    h_files = <span class="b">sorted</span>(src_dir.rglob(<span class="s">"*.h"</span>)) + <span class="b">sorted</span>(src_dir.rglob(<span class="s">"*.hpp"</span>))
+
+    <span class="c"># 2. 生成文件列表字符串</span>
+    sources_str = <span class="s">"</span><span class="se">\n    </span><span class="s">"</span>.join(<span class="s">f'"${{CMAKE_CURRENT_SOURCE_DIR}}/{f}"'</span>
+                                <span class="k">for</span> f <span class="k">in</span> cpp_files)
+
+    <span class="c"># 3. 找包含目录</span>
+    include_dirs = <span class="b">sorted</span>(<span class="b">set</span>(
+        d <span class="k">for</span> f <span class="k">in</span> h_files <span class="k">for</span> d <span class="k">in</span> [f.parent]
+    ))
+    includes_str = <span class="s">"</span><span class="se">\n    </span><span class="s">"</span>.join(<span class="s">f'"${{CMAKE_CURRENT_SOURCE_DIR}}/{d}"'</span>
+                                <span class="k">for</span> d <span class="k">in</span> include_dirs)
+
+    <span class="c"># 4. 拼装 CMakeLists.txt</span>
+    find_packages = <span class="s">""</span>
+    <span class="k">for</span> dep <span class="k">in</span> deps:
+        pkg = dep.split(<span class="s">"::"</span>)[0] <span class="k">if</span> <span class="s">"::"</span> <span class="k">in</span> dep <span class="k">else</span> dep
+        find_packages += <span class="s">f'find_package({pkg} REQUIRED)</span><span class="se">\n</span><span class="s">'</span>
+
+    links_str = <span class="s">"</span><span class="se">\n        </span><span class="s">"</span>.join(deps) <span class="k">if</span> deps <span class="k">else</span> <span class="s">""</span>
+    link_block = <span class="s">f"""</span>
+<span class="s">target_link_libraries({project_name} PRIVATE</span>
+<span class="s">        {links_str}</span>
+<span class="s">)"""</span> <span class="k">if</span> deps <span class="k">else</span> <span class="s">""</span>
+
+    cmake_content = dedent(<span class="s">f"""\
+    cmake_minimum_required(VERSION 3.16)
+    project({project_name} LANGUAGES CXX)
+
+    set(CMAKE_CXX_STANDARD {cpp_std})
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+    {find_packages}
+    add_executable({project_name}
+        {sources_str}
+    )
+
+    target_include_directories({project_name} PRIVATE
+        {includes_str}
+    )
+    {link_block.strip()}
+    """</span>)
+
+    output.parent.mkdir(parents=<span class="k">True</span>, exist_ok=<span class="k">True</span>)
+    output.write_text(cmake_content, encoding=<span class="s">"utf-8"</span>)
+    <span class="k">return</span> <span class="b">len</span>(cpp_files), <span class="b">len</span>(h_files)
+
+
+<span class="c"># 使用示例</span>
+count_cpp, count_h = generate_cmake(
+    project_name=<span class="s">"MyApp"</span>,
+    src_dir=Path(<span class="s">"src"</span>),
+    output=Path(<span class="s">"CMakeLists.txt"</span>),
+    deps=[<span class="s">"fmt::fmt"</span>, <span class="s">"spdlog::spdlog"</span>]
+)
+<span class="b">print</span>(<span class="s">f"生成 CMakeLists.txt: {count_cpp} 个 .cpp, {count_h} 个 .h"</span>)</code></pre>
+
+<div class="warn">
+  <strong>注意：</strong>自动生成的 CMakeLists.txt 需要人工检查！它无法推断编译选项、平台差异、第三方库版本等复杂配置。把它当作 <strong>90% 的模板</strong>，剩下 10% 手动调整。
+</div>
+
+<!-- ============================ 5. 批量编译 ============================ -->
+<h2 id="batch-build">批量编译：subprocess 实战</h2>
+
+<p>回顾 Day 07 的 <code>subprocess</code>，现在把它用到真正的批量构建场景。</p>
+
+<h3>单个项目的 CMake 构建流程</h3>
+
+<pre><code class="lang-py"><span class="k">import</span> subprocess
+<span class="k">import</span> shlex
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="k">def</span> <span class="f">build_cmake_project</span>(
+    src_dir: Path,
+    build_dir: Path,
+    build_type: <span class="b">str</span> = <span class="s">"Release"</span>,
+    generator: <span class="b">str</span> | <span class="k">None</span> = <span class="k">None</span>,
+    parallel: <span class="b">int</span> | <span class="k">None</span> = <span class="k">None</span>
+) -> <span class="b">tuple</span>[<span class="b">bool</span>, <span class="b">str</span>, <span class="b">str</span>]:
+    <span class="s">"""
+    构建单个 CMake 项目
+
+    Returns:
+        (success, stdout, stderr)
+    """</span>
+    build_dir.mkdir(parents=<span class="k">True</span>, exist_ok=<span class="k">True</span>)
+
+    <span class="c"># —— 阶段 1: 配置 ——</span>
+    cmake_config = [<span class="s">"cmake"</span>, <span class="s">"-S"</span>, <span class="b">str</span>(src_dir),
+                    <span class="s">"-B"</span>, <span class="b">str</span>(build_dir),
+                    <span class="s">f"-DCMAKE_BUILD_TYPE={build_type}"</span>]
+    <span class="k">if</span> generator:
+        cmake_config.extend([<span class="s">"-G"</span>, generator])
+
+    r1 = subprocess.run(cmake_config, capture_output=<span class="k">True</span>, text=<span class="k">True</span>)
+    <span class="k">if</span> r1.returncode != 0:
+        <span class="k">return</span> <span class="k">False</span>, r1.stdout, <span class="s">f"[CONFIGURE FAILED]</span><span class="se">\n</span><span class="s">{r1.stderr}"</span>
+
+    <span class="c"># —— 阶段 2: 构建 ——</span>
+    cmake_build = [<span class="s">"cmake"</span>, <span class="s">"--build"</span>, <span class="b">str</span>(build_dir),
+                   <span class="s">"--config"</span>, build_type]
+    <span class="k">if</span> parallel:
+        cmake_build.extend([<span class="s">"--parallel"</span>, <span class="b">str</span>(parallel)])
+
+    r2 = subprocess.run(cmake_build, capture_output=<span class="k">True</span>, text=<span class="k">True</span>)
+    <span class="k">if</span> r2.returncode != 0:
+        <span class="k">return</span> <span class="k">False</span>, r2.stdout, <span class="s">f"[BUILD FAILED]</span><span class="se">\n</span><span class="s">{r2.stderr}"</span>
+
+    <span class="k">return</span> <span class="k">True</span>, r2.stdout, <span class="s">""</span></code></pre>
+
+<div class="tip">
+  <strong>💡 对比 make：</strong>如果不用 cmake --build，可以直接调用 make/ninja/msbuild。CMake 的好处是 <code>--build</code> 抽象了底层构建工具。
+</div>
+
+<h3>批量构建多个子项目</h3>
+
+<pre><code class="lang-py"><span class="k">from</span> dataclasses <span class="k">import</span> dataclass
+<span class="k">from</span> concurrent.futures <span class="k">import</span> ThreadPoolExecutor, as_completed
+
+<span class="k">@dataclass</span>
+<span class="k">class</span> BuildResult:
+    project: <span class="b">str</span>
+    success: <span class="b">bool</span>
+    duration: <span class="b">float</span>
+    errors: <span class="b">str</span> = <span class="s">""</span>
+
+<span class="k">def</span> <span class="f">batch_build</span>(projects: <span class="b">dict</span>[<span class="b">str</span>, Path],
+                 output_root: Path,
+                 build_type: <span class="b">str</span> = <span class="s">"Release"</span>,
+                 max_workers: <span class="b">int</span> = 4) -> <span class="b">list</span>[BuildResult]:
+    <span class="s">"""
+    批量构建多个 CMake 项目
+
+    Args:
+        projects: {项目名: 源码目录}
+        output_root: 构建输出根目录
+        max_workers: 并行构建线程数（注意内存！）
+    """</span>
+    <span class="k">import</span> time
+    results = []
+
+    <span class="k">def</span> <span class="f">build_one</span>(name, src):
+        t0 = time.time()
+        ok, out, err = build_cmake_project(
+            src, output_root / name, build_type
+        )
+        elapsed = time.time() - t0
+        <span class="k">return</span> BuildResult(name, ok, elapsed, err)
+
+    <span class="k">with</span> ThreadPoolExecutor(max_workers=max_workers) <span class="k">as</span> pool:
+        futures = {
+            pool.submit(build_one, name, src): name
+            <span class="k">for</span> name, src <span class="k">in</span> projects.items()
+        }
+        <span class="k">for</span> future <span class="k">in</span> as_completed(futures):
+            result = future.result()
+            results.append(result)
+            status = <span class="s">"OK"</span> <span class="k">if</span> result.success <span class="k">else</span> <span class="s">"FAILED"</span>
+            <span class="b">print</span>(<span class="s">f"[{status}] {result.project} ({result.duration:.1f}s)"</span>)
+            <span class="k">if</span> result.errors:
+                <span class="b">print</span>(result.errors[:200])
+
+    <span class="k">return</span> results</code></pre>
+
+<div class="warn">
+  <strong>并行编译须知：</strong>多个 CMake 项目并行编译会同时消耗大量 CPU 和内存。<code>max_workers</code> 设 2~4 比较安全。每个项目内部的 <code>--parallel</code> 用 CMake 自己控制。
+</div>
+
+<h3>C++ vs Python 构建脚本：直观对比</h3>
+
+<div class="comp-grid">
+<div>
+  <div class="comp-label"><span class="badge badge-cpp">Shell 脚本</span> 批量构建（脆弱）</div>
+  <pre><code class="lang-shell"><span class="c">#!/bin/bash</span>
+<span class="k">for</span> proj <span class="k">in</span> proj1 proj2 proj3; <span class="k">do</span>
+    cmake -S $proj -B build/$proj -DCMAKE_BUILD_TYPE=Release
+    <span class="k">if</span> [ $? -ne 0 ]; <span class="k">then</span>
+        <span class="nb">echo</span> <span class="s2">"FAILED: $proj"</span> &gt;&amp;2
+        <span class="k">continue</span>
+    <span class="k">fi</span>
+    cmake --build build/$proj --config Release
+    <span class="k">if</span> [ $? -eq 0 ]; <span class="k">then</span>
+        <span class="nb">echo</span> <span class="s2">"OK: $proj"</span>
+    <span class="k">else</span>
+        <span class="nb">echo</span> <span class="s2">"FAILED: $proj"</span> &gt;&amp;2
+    <span class="k">fi</span>
+<span class="k">done</span></code></pre>
+</div>
+<div>
+  <div class="comp-label"><span class="badge badge-py">Python</span> 批量构建（健壮）</div>
+  <pre><code class="lang-py"><span class="c"># 相同功能，但多了丰富的错误信息</span>
+results = batch_build(
+    projects={
+        <span class="s">"core"</span>: Path(<span class="s">"core"</span>),
+        <span class="s">"net"</span>: Path(<span class="s">"network"</span>),
+        <span class="s">"gui"</span>: Path(<span class="s">"gui"</span>),
+    },
+    output_root=Path(<span class="s">"build"</span>),
+    max_workers=2  <span class="c"># 控制并行度</span>
+)
+
+<span class="c"># 生成 HTML 构建报告</span>
+ok = <span class="b">sum</span>(1 <span class="k">for</span> r <span class="k">in</span> results <span class="k">if</span> r.success)
+<span class="b">print</span>(<span class="s">f"构建完成: {ok}/{len(results)} 成功"</span>)
+
+<span class="c"># 失败的单独列出，方便排查</span>
+<span class="k">for</span> r <span class="k">in</span> results:
+    <span class="k">if</span> <span class="k">not</span> r.success:
+        <span class="b">print</span>(<span class="s">f"</span><span class="se">\n</span><span class="s">=== {r.project} 构建失败 ==="</span>)
+        <span class="b">print</span>(r.errors[:500])</code></pre>
+</div>
+</div>
+
+<!-- ============================ 6. 依赖检测 ============================ -->
+<h2 id="deps">依赖检测与增量构建</h2>
+
+<p>增量构建：只重新编译修改过的文件。CMake + Ninja/MSBuild 自动处理，但我们也可以用 Python 做<span style="color:var(--accent4)">预检查</span>——比如只对有变更的子项目运行构建。</p>
+
+<h3>检测修改过的源文件</h3>
+
+<pre><code class="lang-py"><span class="k">import</span> os
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="k">def</span> <span class="f">find_changed_sources</span>(src_dir: Path, last_build_time: <span class="b">float</span>) -> <span class="b">list</span>[Path]:
+    <span class="s">"""
+    返回自上次构建以来修改过的源文件
+
+    Args:
+        src_dir: 源码目录
+        last_build_time: 上次构建的 Unix 时间戳
+    """</span>
+    changed = []
+    <span class="k">for</span> f <span class="k">in</span> src_dir.rglob(<span class="s">"*"</span>):
+        <span class="k">if</span> f.is_file() <span class="k">and</span> f.suffix <span class="k">in</span> (<span class="s">".cpp"</span>, <span class="s">".h"</span>, <span class="s">".hpp"</span>, <span class="s">".c"</span>):
+            <span class="k">if</span> f.stat().st_mtime > last_build_time:
+                changed.append(f)
+    <span class="k">return</span> changed
+
+
+<span class="k">def</span> <span class="f">should_rebuild</span>(src_dir: Path, build_marker: Path) -> <span class="b">bool</span>:
+    <span class="s">"""
+    判断是否需要重新构建
+
+    策略：检查 src_dir 下是否有比 build_marker 更新的文件
+    """</span>
+    <span class="k">if</span> <span class="k">not</span> build_marker.exists():
+        <span class="k">return</span> <span class="k">True</span>  <span class="c"># 从未构建过</span>
+
+    last_build = build_marker.stat().st_mtime
+    <span class="k">for</span> ext <span class="k">in</span> (<span class="s">"*.cpp"</span>, <span class="s">"*.h"</span>, <span class="s">"*.hpp"</span>, <span class="s">"*.c"</span>, <span class="s">"CMakeLists.txt"</span>):
+        <span class="k">for</span> f <span class="k">in</span> src_dir.rglob(ext):
+            <span class="k">if</span> f.stat().st_mtime > last_build:
+                <span class="b">print</span>(<span class="s">f"  → 检测到变更: {f.name}"</span>)
+                <span class="k">return</span> <span class="k">True</span>
+    <span class="k">return</span> <span class="k">False</span>
+
+
+<span class="c"># 用法：在构建成功后写一个时间戳文件</span>
+<span class="k">def</span> <span class="f">mark_build_complete</span>(marker: Path):
+    marker.write_text(<span class="s">""</span>)  <span class="c"># touch 文件</span>
+
+<span class="c"># 构建流程</span>
+build_marker = Path(<span class="s">"build/.last_build"</span>)
+<span class="k">if</span> should_rebuild(Path(<span class="s">"src"</span>), build_marker):
+    <span class="b">print</span>(<span class="s">"需要重新编译..."</span>)
+    success, _, _ = build_cmake_project(Path(<span class="s">"."</span>), Path(<span class="s">"build"</span>))
+    <span class="k">if</span> success:
+        mark_build_complete(build_marker)
+        <span class="b">print</span>(<span class="s">"构建成功！"</span>)</code></pre>
+
+<div class="tip">
+  <strong>进阶：</strong>真实项目用 <code>git diff --name-only HEAD</code> 判断变更更准确。可以用 <code>subprocess</code> 调用 git 命令，比文件时间戳更可靠。
+</div>
+
+<!-- ============================ 7. 构建配置管理 ============================ -->
+<h2 id="config">构建配置管理 JSON/YAML</h2>
+
+<p>用配置文件驱动构建，避免硬编码路径和参数。</p>
+
+<h3>JSON 构建配置示例</h3>
+
+<pre><code class="lang-json">{
+  <span class="s">"workspace"</span>: <span class="s">"D:/Code/MyProject"</span>,
+  <span class="s">"build_root"</span>: <span class="s">"build"</span>,
+  <span class="s">"build_type"</span>: <span class="s">"Release"</span>,
+  <span class="s">"generator"</span>: <span class="s">"Visual Studio 17 2022"</span>,
+  <span class="s">"projects"</span>: [
+    {
+      <span class="s">"name"</span>: <span class="s">"myapp_core"</span>,
+      <span class="s">"src"</span>: <span class="s">"src/core"</span>,
+      <span class="s">"deps"</span>: [<span class="s">"fmt"</span>, <span class="s">"spdlog"</span>]
+    },
+    {
+      <span class="s">"name"</span>: <span class="s">"myapp_plugins"</span>,
+      <span class="s">"src"</span>: <span class="s">"src/plugins"</span>,
+      <span class="s">"deps"</span>: [<span class="s">"myapp_core"</span>, <span class="s">"Qt6::Widgets"</span>],
+      <span class="s">"skip"</span>: <span class="k">false</span>
+    }
+  ]
+}</code></pre>
+
+<h3>Python 读取配置驱动构建</h3>
+
+<pre><code class="lang-py"><span class="k">import</span> json
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="k">class</span> <span class="t">BuildConfig</span>:
+    <span class="k">def</span> <span class="f">__init__</span>(<span class="k">self</span>, config_path: Path):
+        data = json.loads(config_path.read_text())
+        <span class="k">self</span>.workspace = Path(data[<span class="s">"workspace"</span>])
+        <span class="k">self</span>.build_root = Path(data[<span class="s">"build_root"</span>])
+        <span class="k">self</span>.build_type = data.get(<span class="s">"build_type"</span>, <span class="s">"Release"</span>)
+        <span class="k">self</span>.generator = data.get(<span class="s">"generator"</span>)
+        <span class="k">self</span>.projects = data[<span class="s">"projects"</span>]
+
+    <span class="k">def</span> <span class="f">get_enabled_projects</span>(<span class="k">self</span>):
+        <span class="s">"""返回 {项目名: 源码路径}，跳过 skip=true 的项目"""</span>
+        <span class="k">return</span> {
+            p[<span class="s">"name"</span>]: <span class="k">self</span>.workspace / p[<span class="s">"src"</span>]
+            <span class="k">for</span> p <span class="k">in</span> <span class="k">self</span>.projects
+            <span class="k">if</span> <span class="k">not</span> p.get(<span class="s">"skip"</span>, <span class="k">False</span>)
+        }
+
+
+<span class="c"># 驱动构建</span>
+config = BuildConfig(Path(<span class="s">"build_config.json"</span>))
+projects = config.get_enabled_projects()
+<span class="b">print</span>(<span class="s">f"将构建 {len(projects)} 个项目"</span>)
+
+results = batch_build(
+    projects=projects,
+    output_root=config.build_root,
+    build_type=config.build_type
+)</code></pre>
+
+<div class="info">
+  <strong>YAML 也推荐使用：</strong>json 是标准库，零依赖；但 YAML 可读性更好、支持注释。如果项目已有 <code>pyyaml</code>，可以轻松切换：<code>import yaml; data = yaml.safe_load(config_path.read_text())</code>
+</div>
+
+<!-- ============================ 8. 代码生成 ============================ -->
+<h2 id="codegen">代码生成：从模板到 .h/.cpp</h2>
+
+<p>还记得 Day 04 的 <code>cpp_class_generator.py</code> 吗？这里是升级版——基于模板引擎批量生成项目文件。</p>
+
+<h3>用 Jinja2 生成头文件</h3>
+
+<pre><code class="lang-py"><span class="c"># pip install jinja2</span>
+<span class="k">from</span> jinja2 <span class="k">import</span> Template
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="c"># 模板（可以放在单独文件）</span>
+HEADER_TEMPLATE = <span class="s">"""\
+/**
+ * @file {{ filename }}.h
+ * @brief {{ brief }}
+ * Auto-generated by build script — DO NOT EDIT manually.
+ */
+#pragma once
+
+{%- for inc in includes %}
+#include &lt;{{ inc }}&gt;
+{%- endfor %}
+
+namespace {{ namespace }} {
+
+{%- for method in methods %}
+    {{ method.signature }};
+{%- endfor %}
+
+} // namespace {{ namespace }}
+"""</span>
+
+<span class="k">def</span> <span class="f">generate_header</span>(config: <span class="b">dict</span>, output_dir: Path):
+    <span class="s">"""从配置生成 .h 文件"""</span>
+    template = Template(HEADER_TEMPLATE)
+    content = template.render(**config)
+    output = output_dir / <span class="s">f"{config['filename']}.h"</span>
+    output.parent.mkdir(parents=<span class="k">True</span>, exist_ok=<span class="k">True</span>)
+    output.write_text(content, encoding=<span class="s">"utf-8"</span>)
+    <span class="k">return</span> output
+
+
+<span class="c"># 批量生成接口文件</span>
+api_defs = [
+    {
+        <span class="s">"filename"</span>: <span class="s">"ILogger"</span>,
+        <span class="s">"brief"</span>: <span class="s">"日志接口"</span>,
+        <span class="s">"namespace"</span>: <span class="s">"myapp"</span>,
+        <span class="s">"includes"</span>: [<span class="s">"string"</span>, <span class="s">"string_view"</span>, <span class="s">"memory"</span>],
+        <span class="s">"methods"</span>: [
+            {<span class="s">"signature"</span>: <span class="s">"virtual void log(std::string_view msg) = 0"</span>},
+            {<span class="s">"signature"</span>: <span class="s">"virtual void error(std::string_view msg) = 0"</span>},
+            {<span class="s">"signature"</span>: <span class="s">"virtual ~ILogger() = default"</span>},
+        ]
+    },
+    {
+        <span class="s">"filename"</span>: <span class="s">"ISerializer"</span>,
+        <span class="s">"brief"</span>: <span class="s">"序列化接口"</span>,
+        <span class="s">"namespace"</span>: <span class="s">"myapp"</span>,
+        <span class="s">"includes"</span>: [<span class="s">"string"</span>, <span class="s">"vector"</span>, <span class="s">"cstdint"</span>],
+        <span class="s">"methods"</span>: [
+            {<span class="s">"signature"</span>: <span class="s">"virtual std::string serialize() const = 0"</span>},
+            {<span class="s">"signature"</span>: <span class="s">"virtual bool deserialize(std::string_view data) = 0"</span>},
+        ]
+    },
+]
+
+<span class="k">for</span> api <span class="k">in</span> api_defs:
+    out = generate_header(api, Path(<span class="s">"generated"</span>))
+    <span class="b">print</span>(<span class="s">f"生成: {out}"</span>)</code></pre>
+
+<div class="tip">
+  <strong>Jinja2 的威力：</strong>模板引擎支持条件、循环、过滤器、继承——比字符串拼接强 100 倍。适合生成 <code>CMakeLists.txt</code>、<code>.h/.cpp</code>、<code>conanfile.py</code>、CI 配置等。
+</div>
+
+<!-- ============================ 9. 测试运行 ============================ -->
+<h2 id="test">测试运行与结果聚合</h2>
+
+<p>构建完成后自动跑测试、汇总结果。</p>
+
+<h3>自动发现并运行 CTest / gtest 可执行文件</h3>
+
+<pre><code class="lang-py"><span class="k">import</span> subprocess
+<span class="k">import</span> re
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="k">def</span> <span class="f">run_ctest</span>(build_dir: Path, timeout: <span class="b">int</span> = 60) -> <span class="b">dict</span>:
+    <span class="s">"""
+    在构建目录运行 CTest，解析结果
+
+    Returns:
+        {"total": int, "passed": int, "failed": int, "failures": [...]}
+    """</span>
+    r = subprocess.run(
+        [<span class="s">"ctest"</span>, <span class="s">"--test-dir"</span>, <span class="b">str</span>(build_dir),
+         <span class="s">"--output-on-failure"</span>],
+        capture_output=<span class="k">True</span>, text=<span class="k">True</span>,
+        timeout=timeout
+    )
+    output = r.stdout + r.stderr
+
+    <span class="c"># 解析 CTest 输出</span>
+    total = 0; passed = 0; failed = 0; failures = []
+    <span class="k">for</span> line <span class="k">in</span> output.splitlines():
+        <span class="k">if</span> <span class="s">"tests from"</span> <span class="k">in</span> line:
+            m = re.search(<span class="s">r'(\d+) tests from'</span>, line)
+            <span class="k">if</span> m: total += <span class="b">int</span>(m.group(1))
+        <span class="k">if</span> <span class="s">"100% tests passed"</span> <span class="k">in</span> line:
+            m = re.search(<span class="s">r'(\d+) tests passed'</span>, line)
+            <span class="k">if</span> m: passed += <span class="b">int</span>(m.group(1))
+        <span class="k">if</span> <span class="s">"FAILED"</span> <span class="k">in</span> line <span class="k">and</span> <span class="s">"test"</span> <span class="k">in</span> line.lower():
+            failures.append(line.strip())
+
+    failed = total - passed <span class="k">if</span> total > 0 <span class="k">else</span> 0
+    <span class="k">return</span> {
+        <span class="s">"total"</span>: total, <span class="s">"passed"</span>: passed,
+        <span class="s">"failed"</span>: failed, <span class="s">"failures"</span>: failures
+    }
+
+
+<span class="k">def</span> <span class="f">find_and_run_gtest</span>(build_dir: Path, pattern: <span class="b">str</span> = <span class="s">"*test*"</span>) -> <span class="b">list</span>[<span class="b">dict</span>]:
+    <span class="s">"""
+    在构建目录找 gtest 可执行文件并逐个运行
+
+    Returns:
+        [{name, success, output, ...}]
+    """</span>
+    results = []
+    <span class="k">for</span> exe <span class="k">in</span> build_dir.rglob(pattern):
+        <span class="k">if</span> exe.is_file() <span class="k">and</span> os.access(exe, os.X_OK):
+            r = subprocess.run(
+                [<span class="b">str</span>(exe), <span class="s">"--gtest_brief=1"</span>],
+                capture_output=<span class="k">True</span>, text=<span class="k">True</span>, timeout=30
+            )
+            results.append({
+                <span class="s">"name"</span>: exe.name,
+                <span class="s">"success"</span>: r.returncode == 0,
+                <span class="s">"output"</span>: r.stdout,
+                <span class="s">"errors"</span>: r.stderr
+            })
+    <span class="k">return</span> results</code></pre>
+
+<!-- ============================ 10. 实战工具 ============================ -->
+<h2 id="tool">实战工具：C++ 项目批量化构建器</h2>
+
+<p>把以上所有知识点串联成一个完整的工具：<strong><code>cpp_project_builder.py</code></strong></p>
+
+<h3>功能清单</h3>
+
+<ul>
+  <li>从 JSON 配置文件读取项目列表</li>
+  <li>按顺序或并行构建所有子项目</li>
+  <li>增量构建（只构建有变更的项目）</li>
+  <li>运行 CTest 并汇总结果</li>
+  <li>生成 HTML 构建报告</li>
+  <li>彩色命令行输出（使用 <code>rich</code> 库或手动 ANSI 色码）</li>
+</ul>
+
+<h3>命令行用法</h3>
+
+<pre><code class="lang-shell"><span class="c"># 完整构建</span>
+python cpp_project_builder.py build --config build_config.json
+
+<span class="c"># 增量构建（跳过没有变更的项目）</span>
+python cpp_project_builder.py build --config build_config.json --incremental
+
+<span class="c"># 只构建指定项目</span>
+python cpp_project_builder.py build --config build_config.json --only core,plugins
+
+<span class="c"># 构建 + 测试</span>
+python cpp_project_builder.py build --config build_config.json --test
+
+<span class="c"># 清理构建产物</span>
+python cpp_project_builder.py clean --config build_config.json
+
+<span class="c"># 生成构建报告</span>
+python cpp_project_builder.py report --config build_config.json</code></pre>
+
+<h3>架构概览</h3>
+
+<pre><code class="lang-py"><span class="c"># cpp_project_builder.py 核心架构</span>
+<span class="s">"""
+argparse (CLI)
+    ↓
+BuildConfig (读取 JSON)
+    ↓
+ProjectScanner (发现 .cpp/.h/CMakeLists.txt)
+    ↓
+BatchBuilder (并行编译多个项目)
+    ├── CMakeBuilder (单个项目 cmake 配置+构建)
+    └── TestRunner (可选：运行测试)
+    ↓
+ReportGenerator (HTML/控制台 报告)
+"""</span></code></pre>
+
+<div class="info">
+  <strong>完整源码见：</strong><code>Day09/cpp_project_builder.py</code>。这个工具可以直接在你的 C++ 项目中使用，作为构建脚本的 Python 替代品。
+</div>
+
+<!-- ============================ 11. 小结 ============================ -->
+<h2 id="summary">小结与练习</h2>
+
+<h3>Day 09 知识点总结</h3>
+
+<table>
+  <tr><th>主题</th><th>Python 方案</th><th>C++ 对比 / 说明</th></tr>
+  <tr>
+    <td>文件遍历</td>
+    <td><code>pathlib.Path.rglob("*.cpp")</code></td>
+    <td>C++17 <code>std::filesystem::recursive_directory_iterator</code></td>
+  </tr>
+  <tr>
+    <td>CMake 解析</td>
+    <td>正则 + read_text</td>
+    <td>更推荐读 compile_commands.json</td>
+  </tr>
+  <tr>
+    <td>CMake 生成</td>
+    <td>Jinja2 模板 / 字符串拼接</td>
+    <td>无 C++ 等价，这是脚本的天然优势</td>
+  </tr>
+  <tr>
+    <td>批量编译</td>
+    <td><code>subprocess.run</code> + <code>ThreadPoolExecutor</code></td>
+    <td>C++ 需要很多样板代码</td>
+  </tr>
+  <tr>
+    <td>增量检测</td>
+    <td><code>stat().st_mtime</code> / git diff</td>
+    <td>C++ 同样用 filesystem</td>
+  </tr>
+  <tr>
+    <td>配置管理</td>
+    <td><code>json</code> / <code>yaml</code> 标准库</td>
+    <td>C++ 没有标准 JSON 库（C++26 才有）</td>
+  </tr>
+  <tr>
+    <td>代码生成</td>
+    <td>Jinja2 模板引擎</td>
+    <td>C++ constexpr/codegen 完全不同</td>
+  </tr>
+  <tr>
+    <td>测试运行</td>
+    <td>subprocess 调 CTest/gtest</td>
+    <td>—</td>
+  </tr>
+</table>
+
+<h3>练习题</h3>
+
+<ol>
+  <li><strong>解析 compile_commands.json：</strong>写一个脚本，读取 <code>compile_commands.json</code>，统计每个目录的源文件数和编译选项</li>
+  <li><strong>CMake 模板生成：</strong>用 Jinja2 编写一个 CMakeLists.txt 模板，支持条件编译选项和可选依赖</li>
+  <li><strong>增量构建工具：</strong>基于文件时间戳，实现只构建有变更的源文件对应的目标</li>
+  <li><strong>CI 报告生成：</strong>构建完成后生成一份 JUnit XML 格式的测试报告（CI 系统通用格式）</li>
+  <li><strong>头文件依赖图：</strong>扫描所有 <code>#include</code> 语句，用 graphviz 生成依赖关系图</li>
+</ol>
+
+<div class="info" style="margin-top:2rem">
+  <strong>下期预告：Day 10 综合实战 ——</strong>把 Day 01~09 的所有知识串联起来，构建一套完整的 <strong>C++ 项目工具链</strong>：从项目脚手架生成，到编译构建，到测试运行，到报告发布——全部用 Python 驱动！
+</div>
+
+</body>
+</html>

@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 12 — Socket 网络编程</title>
+<style>
+:root{--bg:#0f1117;--surface:#161822;--card:#1c1f2e;--border:#2a2d3e;--fg:#e4e6f0;--muted:#8b8fa3;--accent:#4fc3f7;--green:#66bb6a;--orange:#ffa726;--yellow:#ffee58;--red:#ef5350;--purple:#c792ea;--code-bg:#12131a}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--fg);line-height:1.8}
+
+/* ===== HERO ===== */
+.hero{background:linear-gradient(135deg,#1a1c2e 0%,#0f1117 60%,#14101f 100%);border-bottom:1px solid var(--border);padding:56px 24px 40px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-80px;left:-80px;width:320px;height:320px;background:radial-gradient(circle,rgba(79,195,247,0.07) 0%,transparent 70%)}
+.hero::after{content:'';position:absolute;bottom:-60px;right:-60px;width:260px;height:260px;background:radial-gradient(circle,rgba(199,146,234,0.08) 0%,transparent 70%)}
+.hero .badge{display:inline-block;background:rgba(199,146,234,0.15);border:1px solid rgba(199,146,234,0.4);color:var(--purple);font-size:11px;font-weight:700;letter-spacing:1.5px;padding:4px 14px;border-radius:20px;margin-bottom:14px;text-transform:uppercase}
+.hero h1{font-size:clamp(26px,5vw,42px);font-weight:800;color:#fff;line-height:1.2;margin-bottom:12px}
+.hero h1 .hl{color:var(--yellow)}
+.hero h1 .hl2{color:var(--purple)}
+.hero p{color:var(--muted);font-size:15px;max-width:560px;margin:0 auto}
+.hero .cmd-demo{display:inline-block;background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:8px 20px;margin-top:18px;font-family:'Fira Code','Consolas',monospace;font-size:15px;color:var(--green)}
+.hero .cmd-demo .dollar{color:var(--muted)}
+
+/* ===== LAYOUT ===== */
+.container{max-width:860px;margin:0 auto;padding:40px 24px 80px}
+h2{font-size:22px;color:#fff;margin:40px 0 16px;border-bottom:1px solid var(--border);padding-bottom:8px;display:flex;align-items:center;gap:10px}
+h2 .h2-tag{font-size:11px;background:rgba(79,195,247,0.12);border:1px solid rgba(79,195,247,0.25);color:var(--accent);padding:2px 10px;border-radius:12px;font-weight:600;letter-spacing:.5px;white-space:nowrap}
+h3{font-size:16px;color:var(--accent);margin:22px 0 10px}
+p{margin-bottom:14px;color:var(--fg)}
+a{color:var(--accent)}
+
+/* ===== CODE BLOCKS ===== */
+.code-block{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:14px 0;overflow-x:auto;font-size:13px;line-height:1.7;position:relative}
+.code-block .label{font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.label.cmd{color:var(--green)}.label.cmd .dot{background:var(--green)}
+.label.py{color:var(--yellow)}.label.py .dot{background:var(--yellow)}
+.label.out{color:var(--muted)}.label.out .dot{background:var(--muted)}
+.label.cpp{color:var(--accent)}.label.cpp .dot{background:var(--accent)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+pre{margin:0;white-space:pre;font-family:'Fira Code','Consolas','Courier New',monospace}
+.cm{color:#6a6d83}.kw{color:#c792ea}.st{color:#c3e88d}.nm{color:#f78c6c}.ty{color:#ffcb6b}.fn{color:#82aaff}.op{color:#89ddff}.gr{color:#66bb6a}
+
+/* ===== COMPARE ===== */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+@media(max-width:600px){.compare{grid-template-columns:1fr}}
+.compare .side{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow-x:auto}
+.side.cpp .side-label{color:var(--accent)}.side.cpp .dot{background:var(--accent)}
+.side.py  .side-label{color:var(--yellow)}.side.py  .dot{background:var(--yellow)}
+.side-label{font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+
+/* ===== TIP / WARN / SUCCESS ===== */
+.tip{background:rgba(79,195,247,0.07);border:1px solid rgba(79,195,247,0.2);border-radius:8px;padding:14px 18px;margin:14px 0;font-size:14px}
+.tip::before{content:'💡 ';color:var(--accent)}
+.warn{background:rgba(255,167,38,0.07);border:1px solid rgba(255,167,38,0.2);border-radius:8px;padding:14px 18px;margin:14px 0;font-size:14px}
+.warn::before{content:'⚠️ ';color:var(--orange)}
+.success{background:rgba(102,187,106,0.07);border:1px solid rgba(102,187,106,0.2);border-radius:8px;padding:14px 18px;margin:14px 0;font-size:14px}
+.success::before{content:'✅ ';color:var(--green)}
+
+/* ===== CMD CARD ===== */
+.cmd-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin:12px 0;display:flex;gap:18px;align-items:flex-start}
+.cmd-icon{font-size:28px;flex-shrink:0;margin-top:2px}
+.cmd-info h3{margin:0 0 6px;font-size:15px;color:#fff}
+.cmd-info p{margin:0;font-size:13px;color:var(--muted)}
+.cmd-info .cmd-str{display:inline-block;background:var(--code-bg);border:1px solid var(--border);border-radius:5px;padding:3px 10px;font-family:'Fira Code','Consolas',monospace;font-size:12px;color:var(--green);margin-top:6px}
+.cmd-stars{margin-left:auto;flex-shrink:0;font-size:13px;color:var(--yellow)}
+
+/* ===== TABLE ===== */
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th{background:var(--surface);color:var(--muted);text-align:left;padding:8px 14px;border-bottom:2px solid var(--border);font-size:11px;letter-spacing:1px;text-transform:uppercase}
+td{padding:8px 14px;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,0.02)}
+.hl-green{color:var(--green)}.hl-yellow{color:var(--yellow)}.hl-accent{color:var(--accent)}.hl-red{color:var(--red)}.hl-purple{color:var(--purple)}
+
+/* ===== CHAPTERS ===== */
+.chapters{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin:24px 0}
+.chapters h3{font-size:15px;color:var(--fg);margin-bottom:12px}
+.ch-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+@media(max-width:500px){.ch-grid{grid-template-columns:1fr}}
+.ch-item{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surface);border-radius:6px;cursor:pointer;font-size:13px;color:var(--fg);transition:.15s}
+.ch-item:hover{background:rgba(79,195,247,0.08);color:var(--accent)}
+.ch-n{width:22px;height:22px;border-radius:5px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0}
+.ch-item:hover .ch-n{background:rgba(79,195,247,0.15);color:var(--accent)}
+.ch-tag{font-size:10px;background:rgba(79,195,247,0.1);color:var(--accent);border:1px solid rgba(79,195,247,0.2);padding:1px 7px;border-radius:10px;margin-left:auto;white-space:nowrap}
+.ch-tag.green{background:rgba(102,187,106,0.1);color:var(--green);border-color:rgba(102,187,106,0.2)}
+
+/* ===== DIAGRAM ===== */
+.diagram{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px;margin:14px 0;text-align:center}
+.diagram svg{max-width:100%}
+
+/* ===== NAV ===== */
+.nav-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 20px;margin:24px 0;display:flex;justify-content:space-between;align-items:center}
+.nav-bar a{color:var(--accent);font-size:14px;text-decoration:none;font-weight:600}
+.footer{text-align:center;padding:32px 24px;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">🌐 实用技巧 · Day 12</div>
+  <h1><span class="hl">Socket</span> 网络编程 —— <span class="hl2">亲手写一个网络对话</span></h1>
+  <p>用 Python 的 socket 模块理解 TCP/UDP 底层通信，顺带实现端口扫描器</p>
+  <div class="cmd-demo"><span class="dollar">$ </span>python port_scanner.py 192.168.1.1 1-1024</div>
+</div>
+
+<div class="container">
+
+<!-- ===== CHAPTERS ===== -->
+<div class="chapters">
+  <h3>📖 本章目录</h3>
+  <div class="ch-grid">
+    <div class="ch-item"><div class="ch-n">1</div> Socket 是什么？<div class="ch-tag">概念</div></div>
+    <div class="ch-item"><div class="ch-n">2</div> TCP 客户端<div class="ch-tag green">实战</div></div>
+    <div class="ch-item"><div class="ch-n">3</div> TCP 服务器<div class="ch-tag green">实战</div></div>
+    <div class="ch-item"><div class="ch-n">4</div> UDP 通信<div class="ch-tag green">实战</div></div>
+    <div class="ch-item"><div class="ch-n">5</div> 地址解析 (gethostbyname)<div class="ch-tag">工具</div></div>
+    <div class="ch-item"><div class="ch-n">6</div> 端口扫描原理<div class="ch-tag green">实战</div></div>
+    <div class="ch-item"><div class="ch-n">7</div> select / 非阻塞 IO<div class="ch-tag">进阶</div></div>
+    <div class="ch-item"><div class="ch-n">8</div> Python vs C++ Socket<div class="ch-tag">对比</div></div>
+    <div class="ch-item"><div class="ch-n">9</div> 安全与最佳实践<div class="ch-tag">规范</div></div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- 1. Socket 是什么 -->
+<!-- ================================================================ -->
+<h2><span class="h2-tag">概念</span>1. Socket 是什么？</h2>
+
+<p>Socket（套接字）是操作系统提供的<strong>网络通信端点</strong>。你可以把它理解成一个「网络版的文件描述符」—— </p>
+<ul style="margin:10px 0 16px 24px;color:var(--fg)">
+  <li>客户端通过 socket 连接到服务器</li>
+  <li>服务器通过 socket 监听并接受连接</li>
+  <li>连接建立后，双方通过 <code style="color:var(--yellow)">send()</code>/<code style="color:var(--yellow)">recv()</code> 收发数据</li>
+</ul>
+
+<div class="diagram">
+<svg viewBox="0 0 680 280" style="max-width:100%">
+  <!-- Client side -->
+  <rect x="30" y="30" width="100" height="30" rx="5" fill="#1c1f2e" stroke="#2a2d3e"/>
+  <text x="80" y="50" text-anchor="middle" fill="#4fc3f7" font-size="11" font-weight="700">socket()</text>
+  <line x1="80" y1="60" x2="80" y2="80" stroke="#2a2d3e"/>
+  <text x="80" y="74" text-anchor="middle" fill="#8b8fa3" font-size="9">创建套接字</text>
+  
+  <rect x="30" y="80" width="100" height="30" rx="5" fill="#1c1f2e" stroke="#2a2d3e"/>
+  <text x="80" y="100" text-anchor="middle" fill="#4fc3f7" font-size="11" font-weight="700">connect()</text>
+  <text x="80" y="114" text-anchor="middle" fill="#8b8fa3" font-size="9">建立连接</text>
+  
+  <!-- 3-way handshake -->
+  <line x1="130" y1="95" x2="160" y2="95" stroke="#66bb6a" stroke-width="1.5"/>
+  <text x="145" y="88" text-anchor="middle" fill="#66bb6a" font-size="9">SYN</text>
+  <line x1="160" y1="105" x2="130" y2="105" stroke="#66bb6a" stroke-width="1.5"/>
+  <text x="145" y="118" text-anchor="middle" fill="#66bb6a" font-size="9">SYN-ACK</text>
+  <line x1="130" y1="115" x2="160" y2="115" stroke="#66bb6a" stroke-width="1.5"/>
+  <text x="145" y="108" text-anchor="middle" fill="#66bb6a" font-size="9">ACK</text>
+  
+  <!-- Server side -->
+  <rect x="550" y="30" width="100" height="30" rx="5" fill="#1c1f2e" stroke="#2a2d3e"/>
+  <text x="600" y="50" text-anchor="middle" fill="#4fc3f7" font-size="11" font-weight="700">socket()</text>
+  
+  <rect x="550" y="70" width="100" height="30" rx="5" fill="#1c1f2e" stroke="#2a2d3e"/>
+  <text x="600" y="90" text-anchor="middle" fill="#4fc3f7" font-size="11" font-weight="700">bind()</text>
+  <text x="600" y="104" text-anchor="middle" fill="#8b8fa3" font-size="9">绑定地址</text>
+  
+  <rect x="550" y="110" width="100" height="30" rx="5" fill="#1c1f2e" stroke="#2a2d3e"/>
+  <text x="600" y="130" text-anchor="middle" fill="#4fc3f7" font-size="11" font-weight="700">listen()</text>
+  <text x="600" y="144" text-anchor="middle" fill="#8b8fa3" font-size="9">开始监听</text>
+  
+  <rect x="550" y="150" width="100" height="30" rx="5" fill="#1c1f2e" stroke="#2a2d3e"/>
+  <text x="600" y="170" text-anchor="middle" fill="#4fc3f7" font-size="11" font-weight="700">accept()</text>
+  <text x="600" y="184" text-anchor="middle" fill="#8b8fa3" font-size="9">接受连接</text>
+  
+  <!-- Data transfer -->
+  <line x1="130" y1="130" x2="550" y2="157" stroke="#89ddff" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="340" y="138" text-anchor="middle" fill="#89ddff" font-size="9">send() / recv() 数据</text>
+  
+  <!-- Bottom labels -->
+  <text x="80" y="180" text-anchor="middle" fill="#ffee58" font-size="11" font-weight="700">客户端</text>
+  <text x="600" y="180" text-anchor="middle" fill="#ffee58" font-size="11" font-weight="700">服务端</text>
+  
+  <line x1="80" y1="150" x2="80" y2="175" stroke="#2a2d3e"/>
+  <line x1="600" y1="220" x2="600" y2="175" stroke="#2a2d3e"/>
+  
+  <!-- C++ note -->
+  <text x="340" y="200" text-anchor="middle" fill="#8b8fa3" font-size="10">C++ 中的 
+    <tspan fill="#4fc3f7">socket()/connect()/bind()/listen()/accept()</tspan> 
+    函数签名完全一致</text>
+  
+  <rect x="190" y="220" width="300" height="35" rx="5" fill="rgba(102,187,106,0.06)" stroke="rgba(102,187,106,0.15)"/>
+  <text x="340" y="242" text-anchor="middle" fill="#66bb6a" font-size="11">Python 的 socket 模块是 Berkeley Sockets API 的薄封装</text>
+</svg>
+</div>
+
+<div class="tip">如果你写过 C++ 的 socket 编程（<code style="color:var(--yellow)">&lt;sys/socket.h&gt;</code> 或 <code style="color:var(--yellow)">Winsock2</code>），会发现 Python 的 socket 模块就是同样的 API 去掉繁琐的错误码处理。连函数名都一模一样！</div>
+
+<!-- ================================================================ -->
+<!-- 2. TCP 客户端 -->
+<!-- ================================================================ -->
+<h2><span class="h2-tag">实战</span>2. TCP 客户端</h2>
+
+<p>TCP 客户端三步走：<strong>创建 socket → 连接服务器 → 收发数据</strong>。</p>
+
+<div class="code-block">
+  <div class="label py"><span class="dot"></span>Python — TCP 客户端</div>
+<pre><span class="kw">import</span> socket
+
+<span class="cm"># 1. 创建 TCP socket（SOCK_STREAM 表示 TCP）</span>
+<span class="nm">sock</span> = socket.socket(socket.<span class="fn">AF_INET</span>, socket.<span class="fn">SOCK_STREAM</span>)
+
+<span class="cm"># 2. 连接服务器</span>
+<span class="nm">sock</span>.connect((<span class="st">"example.com"</span>, <span class="nm">80</span>))
+
+<span class="cm"># 3. 发送 HTTP 请求</span>
+<span class="nm">sock</span>.sendall(<span class="st">b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"</span>)
+
+<span class="cm"># 4. 接收响应</span>
+<span class="nm">response</span> = <span class="nm">sock</span>.recv(<span class="nm">4096</span>)
+<span class="kw">print</span>(<span class="nm">response</span>.decode())
+
+<span class="nm">sock</span>.close()</pre>
+</div>
+
+<div class="code-block">
+  <div class="label cmd"><span class="dot"></span>命令行 — 最简测试</div>
+<pre><span class="dollar">$ </span>python -c "import socket; s=socket.socket(); s.connect(('example.com',80)); <span class="kw">\</span>
+  s.sendall(b'GET / HTTP/1.1\r\nHost: example.com\r\n\r\n'); print(s.recv(1024).decode())"</pre>
+</div>
+
+<div class="compare">
+  <div class="side cpp">
+    <div class="side-label"><span class="dot"></span>C++ 对比（Linux/Winsock）</div>
+<pre><span class="cm">// 需要初始化、错误检查、清理</span>
+<span class="kw">int</span> sock = socket(<span class="fn">AF_INET</span>, <span class="fn">SOCK_STREAM</span>, <span class="nm">0</span>);
+<span class="kw">struct</span> sockaddr_in addr{};
+addr.sin_family = <span class="fn">AF_INET</span>;
+addr.sin_port = htons(<span class="nm">80</span>);
+inet_pton(<span class="fn">AF_INET</span>, <span class="st">"93.184.216.34"</span>, &addr.sin_addr);
+<span class="kw">if</span> (connect(sock, ...) &lt; <span class="nm">0</span>) { perror(...); }
+<span class="kw">const char</span>* req = <span class="st">"GET / HTTP/1.1\r\nHost: ...\r\n\r\n"</span>;
+send(sock, req, strlen(req), <span class="nm">0</span>);
+<span class="kw">char</span> buf[<span class="nm">4096</span>];
+recv(sock, buf, <span class="kw">sizeof</span>(buf), <span class="nm">0</span>);
+close(sock);  <span class="cm">// 或 closesocket(sock)</span></pre>
+  </div>
+  <div class="side py">
+    <div class="side-label"><span class="dot"></span>Python 等价写法</div>
+<pre><span class="kw">import</span> socket
+
+<span class="nm">sock</span> = socket.socket(socket.<span class="fn">AF_INET</span>,
+                      socket.<span class="fn">SOCK_STREAM</span>)
+<span class="nm">sock</span>.connect((<span class="st">"example.com"</span>, <span class="nm">80</span>))
+<span class="nm">sock</span>.sendall(<span class="st">b"GET / HTTP/1.1\r\n"</span>
+              <span class="st">b"Host: example.com\r\n"</span>
+              <span class="st">b"\r\n"</span>)
+<span class="nm">response</span> = <span class="nm">sock</span>.recv(<span class="nm">4096</span>)
+<span class="kw">print</span>(<span class="nm">response</span>.decode())
+<span class="nm">sock</span>.close()</pre>
+  </div>
+</div>
+
+<div class="warn">Python 的 <code style="color:var(--orange)">send()</code> 可能不会一次性发送所有数据（和 C++ 一样）。生产代码务必使用 <code style="color:var(--green)">sendall()</code> 或用循环确保发送完整。</div>
+
+<!-- ================================================================ -->
+<!-- 3. TCP 服务器 -->
+<!-- ================================================================ -->
+<h2><span class="h2-tag">实战</span>3. TCP 服务器</h2>
+
+<p>服务器端多一步：<strong>socket → bind → listen → accept</strong>。每次 accept 返回一个新的 socket 用于和该客户端通信。</p>
+
+<div class="code-block">
+  <div class="label py"><span class="dot"></span>Python — 回显服务器（Echo Server）</div>
+<pre><span class="kw">import</span> socket
+
+<span class="cm"># 1. 创建 socket</span>
+<span class="nm">server</span> = socket.socket(socket.<span class="fn">AF_INET</span>, socket.<span class="fn">SOCK_STREAM</span>)
+<span class="nm">server</span>.setsockopt(socket.<span class="fn">SOL_SOCKET</span>, socket.<span class="fn">SO_REUSEADDR</span>, <span class="nm">1</span>)
+
+<span class="cm"># 2. 绑定地址和端口</span>
+<span class="nm">server</span>.bind((<span class="st">"0.0.0.0"</span>, <span class="nm">8888</span>))
+
+<span class="cm"># 3. 开始监听（backlog = 5）</span>
+<span class="nm">server</span>.listen(<span class="nm">5</span>)
+<span class="kw">print</span>(<span class="st">"[*] 监听 0.0.0.0:8888 ..."</span>)
+
+<span class="kw">while</span> <span class="nm">True</span>:
+    <span class="cm"># 4. 接受连接（阻塞直到有客户端连接）</span>
+    <span class="nm">client</span>, <span class="nm">addr</span> = <span class="nm">server</span>.accept()
+    <span class="kw">print</span>(<span class="st">f"[+] 连接来自 </span><span class="nm">{addr}</span><span class="st">"</span>)
+
+    <span class="cm"># 5. 收发数据</span>
+    <span class="nm">data</span> = <span class="nm">client</span>.recv(<span class="nm">1024</span>)
+    <span class="kw">if</span> <span class="nm">data</span>:
+        <span class="nm">client</span>.sendall(<span class="st">b"Echo: "</span> + <span class="nm">data</span>)
+
+    <span class="nm">client</span>.close()</pre>
+</div>
+
+<h3>C++ 开发者必读：SO_REUSEADDR</h3>
+<p>这个选项和 C++ 中的行为完全一样——允许重用处于 <code style="color:var(--yellow)">TIME_WAIT</code> 状态的端口。没有它，关闭服务器后可能要好几分钟才能重新绑定同一端口。</p>
+
+<div class="tip"><code style="color:var(--yellow)">accept()</code> 返回 <code style="color:var(--yellow)">(conn, address)</code> 元组。这和 C++ 不同：C++ 中 <code style="color:var(--yellow)">accept()</code> 只返回 fd，地址通过指针参数传出。Python 打包成元组更直观。</div>
+
+<!-- ================================================================ -->
+<!-- 4. UDP 通信 -->
+<!-- ================================================================ -->
+<h2><span class="h2-tag">实战</span>4. UDP 通信</h2>
+
+<p>UDP 是无连接协议——不需要 connect/accept，直接 <code style="color:var(--yellow)">sendto()</code>/<code style="color:var(--yellow)">recvfrom()</code>。适合日志收集、DNS 查询、在线游戏等场景。</p>
+
+<div class="code-block">
+  <div class="label py"><span class="dot"></span>Python — UDP 发送与接收</div>
+<pre><span class="kw">import</span> socket
+
+<span class="cm"># --- UDP 发送端 ---</span>
+<span class="nm">sender</span> = socket.socket(socket.<span class="fn">AF_INET</span>, socket.<span class="fn">SOCK_DGRAM</span>)
+<span class="nm">sender</span>.sendto(<span class="st">b"Hello UDP"</span>, (<span class="st">"127.0.0.1"</span>, <span class="nm">9999</span>))
+<span class="nm">sender</span>.close()
+
+<span class="cm"># --- UDP 接收端 ---</span>
+<span class="nm">receiver</span> = socket.socket(socket.<span class="fn">AF_INET</span>, socket.<span class="fn">SOCK_DGRAM</span>)
+<span class="nm">receiver</span>.bind((<span class="st">"0.0.0.0"</span>, <span class="nm">9999</span>))
+<span class="nm">data</span>, <span class="nm">addr</span> = <span class="nm">receiver</span>.recvfrom(<span class="nm">1024</span>)
+<span class="kw">print</span>(<span class="st">f"收到来自 </span><span class="nm">{addr}</span><span class="st">: </span><span class="nm">{data.decode()}</span><span class="st">"</span>)</pre>
+</div>
+
+<table>
+  <tr><th>特性</th><th>TCP (SOCK_STREAM)</th><th>UDP (SOCK_DGRAM)</th></tr>
+  <tr><td>连接</td><td class="hl-accent">面向连接（需三次握手）</td><td class="hl-yellow">无连接</td></tr>
+  <tr><td>可靠性</td><td class="hl-green">可靠（重传/排序）</td><td class="hl-red">不可靠（可能丢包）</td></tr>
+  <tr><td>顺序</td><td class="hl-green">保证顺序</td><td class="hl-red">不保证顺序</td></tr>
+  <tr><td>边界</td><td class="hl-accent">流式（无消息边界）</td><td class="hl-yellow">保留消息边界</td></tr>
+  <tr><td>速度</td><td>较慢（握手+确认）</td><td class="hl-green">快</td></tr>
+  <tr><td>适用场景</td><td>HTTP、文件传输、SSH</td><td>DNS、视频流、游戏</td></tr>
+</table>
+
+<!-- ================================================================ -->
+<!-- 5. 地址解析 -->
+<!-- ================================================================ -->
+<h2><span class="h2-tag">工具</span>5. 地址解析</h2>
+
+<p>Python 内置的 <code style="color:var(--yellow)">socket.gethostbyname()</code> 可以在不写 C 代码的情况下做 DNS 解析。对 C++ 开发者来说，这意味着你可以随手写个小脚本验证 DNS 配置。</p>
+
+<div class="code-block">
+  <div class="label py"><span class="dot"></span>Python — DNS 解析示例</div>
+<pre><span class="kw">import</span> socket
+
+<span class="cm"># 域名 → IP</span>
+<span class="nm">ip</span> = socket.gethostbyname(<span class="st">"github.com"</span>)
+<span class="kw">print</span>(<span class="st">f"github.com → </span><span class="nm">{ip}</span><span class="st">"</span>)
+
+<span class="cm"># IP → 域名（反向解析）</span>
+<span class="nm">host</span> = socket.gethostbyaddr(<span class="st">"8.8.8.8"</span>)
+<span class="kw">print</span>(<span class="st">f"8.8.8.8 → </span><span class="nm">{host[0]}</span><span class="st">"</span>)
+
+<span class="cm"># 获取本机主机名</span>
+<span class="kw">print</span>(<span class="st">f"本机: </span><span class="nm">{socket.gethostname()}</span><span class="st">"</span>)
+
+<span class="cm"># 获取本机所有 IP</span>
+<span class="nm">info</span> = socket.getaddrinfo(<span class="st">"localhost"</span>, <span class="nm">None</span>)
+<span class="kw">for</span> <span class="nm">item</span> <span class="kw">in</span> <span class="nm">info</span>:
+    <span class="kw">print</span>(<span class="st">f"  </span><span class="nm">{item[4]}</span><span class="st">"</span>)  <span class="cm"># (host, port) 元组</span></pre>
+</div>
+
+<div class="code-block">
+  <div class="label cmd"><span class="dot"></span>命令行 — 一行 DNS 查询</div>
+<pre><span class="dollar">$ </span>python -c "import socket; print(socket.gethostbyname('github.com'))"
+<span class="nm">20.205.243.166</span>
+
+<span class="dollar">$ </span>python -c "import socket; print(socket.getaddrinfo('localhost',80))"
+[(AddressFamily.AF_INET, ...), (AddressFamily.AF_INET6, ...)]</pre>
+</div>
+
+<div class="compare">
+  <div class="side cpp">
+    <div class="side-label"><span class="dot"></span>C++（getaddrinfo）</div>
+<pre><span class="kw">struct</span> addrinfo hints{}, *res;
+hints.ai_family = <span class="fn">AF_UNSPEC</span>;
+hints.ai_socktype = <span class="fn">SOCK_STREAM</span>;
+getaddrinfo(<span class="st">"github.com"</span>, <span class="st">"80"</span>, &hints, &res);
+<span class="cm">// 遍历 res→ai_next 链表...</span>
+<span class="cm">// 别忘了 freeaddrinfo(res);</span></pre>
+  </div>
+  <div class="side py">
+    <div class="side-label"><span class="dot"></span>Python</div>
+<pre><span class="nm">results</span> = socket.getaddrinfo(
+    <span class="st">"github.com"</span>, <span class="nm">80</span>,
+    type=socket.<span class="fn">SOCK_STREAM</span>
+)
+<span class="kw">for</span> <span class="nm">fam</span>, <span class="nm">typ</span>, <span class="nm">proto</span>, <span class="nm">canon</span>, <span class="nm">addr</span> <span class="kw">in</span> <span class="nm">results</span>:
+    <span class="kw">print</span>(<span class="nm">addr</span>)
+<span class="cm"># 不需要手动释放</span></pre>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- 6. 端口扫描原理 -->
+<!-- ================================================================ -->
+<h2><span class="h2-tag">实战</span>6. 端口扫描原理</h2>
+
+<p>端口扫描的本质就是<strong>尝试连接目标主机的每个端口</strong>，根据连接结果判断端口是否开放。</p>
+
+<div class="code-block">
+  <div class="label py"><span class="dot"></span>Python — 最简端口扫描（connect 探测）</div>
+<pre><span class="kw">import</span> socket
+
+<span class="kw">def</span> <span class="fn">scan_port</span>(<span class="nm">host</span>, <span class="nm">port</span>, <span class="nm">timeout</span>=<span class="nm">1.0</span>):
+    <span class="st">"""尝试连接指定端口，返回 (端口, 是否开放)"""</span>
+    <span class="nm">sock</span> = socket.socket(socket.<span class="fn">AF_INET</span>, socket.<span class="fn">SOCK_STREAM</span>)
+    <span class="nm">sock</span>.settimeout(<span class="nm">timeout</span>)
+    <span class="kw">try</span>:
+        <span class="nm">result</span> = <span class="nm">sock</span>.connect_ex((<span class="nm">host</span>, <span class="nm">port</span>))
+        <span class="kw">return</span> <span class="nm">port</span>, <span class="nm">result</span> == <span class="nm">0</span>  <span class="cm"># connect_ex 返回 0 表示成功</span>
+    <span class="kw">finally</span>:
+        <span class="nm">sock</span>.close()
+
+<span class="cm"># 扫描 80-85 端口</span>
+<span class="kw">for</span> <span class="nm">port</span> <span class="kw">in</span> range(<span class="nm">80</span>, <span class="nm">86</span>):
+    <span class="nm">p</span>, <span class="nm">ok</span> = <span class="fn">scan_port</span>(<span class="st">"scanme.nmap.org"</span>, <span class="nm">port</span>)
+    <span class="kw">print</span>(<span class="st">f"Port </span><span class="nm">{p}</span><span class="st">: </span><span class="nm">{'OPEN'</span> <span class="kw">if</span> <span class="nm">ok</span> <span class="kw">else</span> <span class="st">'closed'</span><span class="nm">}</span><span class="st">"</span>)</pre>
+</div>
+
+<div class="tip"><code style="color:var(--yellow)">connect_ex()</code> 是 Python 独有的——它和 <code style="color:var(--yellow)">connect()</code> 一样，但连接失败时<strong>不抛异常</strong>，而是返回错误码。对于端口扫描来说，这比 try/except 优雅得多。</div>
+
+<h3>常见的知名端口</h3>
+<table>
+  <tr><th>端口</th><th>服务</th><th>协议</th></tr>
+  <tr><td class="hl-green">21</td><td>FTP</td><td>TCP</td></tr>
+  <tr><td class="hl-green">22</td><td>SSH</td><td>TCP</td></tr>
+  <tr><td class="hl-green">23</td><td>Telnet</td><td>TCP</td></tr>
+  <tr><td class="hl-green">25</td><td>SMTP</td><td>TCP</td></tr>
+  <tr><td class="hl-green">53</td><td>DNS</td><td>TCP/UDP</td></tr>
+  <tr><td class="hl-green">80</td><td>HTTP</td><td>TCP</td></tr>
+  <tr><td class="hl-green">110</td><td>POP3</td><td>TCP</td></tr>
+  <tr><td class="hl-green">143</td><td>IMAP</td><td>TCP</td></tr>
+  <tr><td class="hl-green">443</td><td>HTTPS</td><td>TCP</td></tr>
+  <tr><td class="hl-green">3306</td><td>MySQL</td><td>TCP</td></tr>
+  <tr><td class="hl-green">3389</td><td>RDP（远程桌面）</td><td>TCP</td></tr>
+  <tr><td class="hl-green">5432</td><td>PostgreSQL</td><td>TCP</td></tr>
+  <tr><td class="hl-green">6379</td><td>Redis</td><td>TCP</td></tr>
+  <tr><td class="hl-green">8080</td><td>HTTP Alt / 代理</td><td>TCP</td></tr>
+  <tr><td class="hl-green">27017</td><td>MongoDB</td><td>TCP</td></tr>
+</table>
+
+<!-- ================================================================ -->
+<!-- 7. select / 非阻塞 IO -->
+<!-- ================================================================ -->
+<h2><span class="h2-tag">进阶</span>7. select — 同时处理多个连接</h2>
+
+<p>上面的服务器只能<strong>串行</strong>处理连接（一次一个）。用 <code style="color:var(--yellow)">select.select()</code> 可以同时监控多个 socket。</p>
+
+<div class="code-block">
+  <div class="label py"><span class="dot"></span>Python — select 多路复用</div>
+<pre><span class="kw">import</span> socket
+<span class="kw">import</span> select
+
+<span class="nm">server</span> = socket.socket(socket.<span class="fn">AF_INET</span>, socket.<span class="fn">SOCK_STREAM</span>)
+<span class="nm">server</span>.setsockopt(socket.<span class="fn">SOL_SOCKET</span>, socket.<span class="fn">SO_REUSEADDR</span>, <span class="nm">1</span>)
+<span class="nm">server</span>.bind((<span class="st">"0.0.0.0"</span>, <span class="nm">8888</span>))
+<span class="nm">server</span>.listen(<span class="nm">5</span>)
+<span class="nm">server</span>.setblocking(<span class="nm">False</span>)  <span class="cm"># 非阻塞模式</span>
+
+<span class="nm">sockets</span> = [<span class="nm">server</span>]         <span class="cm"># 待监控的 socket 列表</span>
+
+<span class="kw">while</span> <span class="nm">True</span>:
+    <span class="nm">readable</span>, <span class="nm">_</span>, <span class="nm">_</span> = select.select(<span class="nm">sockets</span>, [], [], <span class="nm">1.0</span>)
+    <span class="kw">for</span> <span class="nm">s</span> <span class="kw">in</span> <span class="nm">readable</span>:
+        <span class="kw">if</span> <span class="nm">s</span> <span class="kw">is</span> <span class="nm">server</span>:
+            <span class="nm">client</span>, <span class="nm">addr</span> = <span class="nm">s</span>.accept()
+            <span class="kw">print</span>(<span class="st">f"[+] </span><span class="nm">{addr}</span><span class="st">"</span>)
+            <span class="nm">client</span>.setblocking(<span class="nm">False</span>)
+            <span class="nm">sockets</span>.append(<span class="nm">client</span>)
+        <span class="kw">else</span>:
+            <span class="nm">data</span> = <span class="nm">s</span>.recv(<span class="nm">1024</span>)
+            <span class="kw">if</span> <span class="nm">data</span>:
+                <span class="nm">s</span>.sendall(<span class="st">b"Echo: "</span> + <span class="nm">data</span>)
+            <span class="kw">else</span>:
+                <span class="nm">sockets</span>.remove(<span class="nm">s</span>)
+                <span class="nm">s</span>.close()</pre>
+</div>
+
+<div class="compare">
+  <div class="side cpp">
+    <div class="side-label"><span class="dot"></span>C++ 对比</div>
+<pre><span class="cm">// C++ 中同样使用 select/poll/epoll
+// select 的 fd_set 操作很繁琐</span>
+<span class="kw">fd_set</span> readfds;
+<span class="fn">FD_ZERO</span>(&readfds);
+<span class="fn">FD_SET</span>(server_fd, &readfds);
+<span class="kw">int</span> max_fd = server_fd;
+<span class="kw">int</span> n = <span class="fn">select</span>(max_fd + <span class="nm">1</span>,
+              &readfds, <span class="nm">NULL</span>, <span class="nm">NULL</span>, &tv);
+<span class="cm">// 还需要手动维护 fd_set 和 max_fd</span>
+<span class="cm">// 每次 select 后重新设置 fd_set</span></pre>
+  </div>
+  <div class="side py">
+    <div class="side-label"><span class="dot"></span>Python</div>
+<pre><span class="nm">readable</span>, <span class="nm">_</span>, <span class="nm">_</span> = select.select(
+    <span class="nm">sockets</span>, [], [], <span class="nm">1.0</span>
+)
+<span class="kw">for</span> <span class="nm">s</span> <span class="kw">in</span> <span class="nm">readable</span>:
+    <span class="kw">if</span> <span class="nm">s</span> <span class="kw">is</span> <span class="nm">server</span>:
+        <span class="nm">conn</span>, <span class="nm">addr</span> = <span class="nm">s</span>.accept()
+        <span class="nm">sockets</span>.append(<span class="nm">conn</span>)
+    <span class="kw">else</span>:
+        <span class="nm">data</span> = <span class="nm">s</span>.recv(<span class="nm">1024</span>)
+        <span class="cm"># ...</span></pre>
+  </div>
+</div>
+
+<div class="tip">Python 3.4+ 推荐用 <code style="color:var(--yellow)">selectors</code> 模块代替 <code style="color:var(--yellow)">select</code>——它会自动选择系统最优的多路复用机制（Linux 用 epoll，Windows 用 IOCP，macOS 用 kqueue）。</div>
+
+<div class="success"><strong>settimeout 妙用：</strong>socket 连接、接收都可设置超时。对于端口扫描，设置连接超时是<strong>性能关键</strong>——没有超时的话，每个失败端口会卡几十秒！<code style="color:var(--yellow);">sock.settimeout(0.5)</code> 可以在速度和准确度之间取得不错的平衡。</div>
+
+<!-- ================================================================ -->
+<!-- 8. Python vs C++ -->
+<!-- ================================================================ -->
+<h2><span class="h2-tag">对比</span>8. Python vs C++ Socket 总结</h2>
+
+<table>
+  <tr><th>维度</th><th>Python</th><th>C++</th></tr>
+  <tr>
+    <td>Socket 创建</td>
+    <td class="hl-yellow"><code>socket.socket()</code></td>
+    <td><code>socket(AF_INET, SOCK_STREAM, 0)</code></td>
+  </tr>
+  <tr>
+    <td>地址结构</td>
+    <td class="hl-yellow"><code>("host", port)</code> 元组</td>
+    <td><code>struct sockaddr_in</code> + htons/pton</td>
+  </tr>
+  <tr>
+    <td>连接探测</td>
+    <td class="hl-yellow"><code>connect_ex()</code> 不抛异常</td>
+    <td>connect() 返回 -1，检查 errno</td>
+  </tr>
+  <tr>
+    <td>字节序</td>
+    <td class="hl-yellow">自动处理（内部 htons）</td>
+    <td>手动 htons/htonl/ntohs/ntohl</td>
+  </tr>
+  <tr>
+    <td>资源释放</td>
+    <td class="hl-yellow">自动 GC / with 上下文</td>
+    <td>手动 close() / RAII</td>
+  </tr>
+  <tr>
+    <td>IO 复用</td>
+    <td class="hl-yellow"><code>selectors</code> 自动选最优</td>
+    <td>手动选择 select/poll/epoll</td>
+  </tr>
+  <tr>
+    <td>错误处理</td>
+    <td class="hl-yellow">异常（OSError）</td>
+    <td>返回值 + errno</td>
+  </tr>
+  <tr>
+    <td>多线程安全</td>
+    <td class="hl-accent">GIL 保护但可能影响并发</td>
+    <td>无锁，手动线程安全设计</td>
+  </tr>
+</table>
+
+<!-- ================================================================ -->
+<!-- 9. 安全与最佳实践 -->
+<!-- ================================================================ -->
+<h2><span class="h2-tag">规范</span>9. 安全与最佳实践</h2>
+
+<div class="warn"><strong>端口扫描法律风险：</strong>未经授权扫描他人主机可能违法。本教程仅用于学习目的和授权安全测试。始终在 <strong>localhost</strong> 或拥有授权的目标上练习。</div>
+
+<h3>编码规范</h3>
+<table>
+  <tr><th>规则</th><th>说明</th></tr>
+  <tr><td class="hl-red">总是关闭 socket</td><td>用 <code>try/finally</code> 或 <code>with sock:</code> (Python 3.2+)</td></tr>
+  <tr><td class="hl-red">设置超时</td><td><code>sock.settimeout(N)</code> 防止永久阻塞</td></tr>
+  <tr><td class="hl-yellow">SO_REUSEADDR</td><td>开发阶段必须设置，方便重启</td></tr>
+  <tr><td class="hl-yellow">超时退让</td><td>扫描时逐渐增加超时，避免误判</td></tr>
+  <tr><td class="hl-green">并行扫描</td><td>使用线程池加速端口扫描</td></tr>
+  <tr><td class="hl-green">优雅关闭</td><td><code>sock.shutdown(SHUT_RDWR)</code> 后再 close</td></tr>
+</table>
+
+<div class="nav-bar">
+  <a href="Day11/day11_python_m.html">← Day 11: python -m 一行命令</a>
+  <span class="new-badge" style="background:rgba(199,146,234,0.15);border:1px solid rgba(199,146,234,0.3);color:var(--purple);padding:4px 12px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:1px">Day 12 • Socket</span>
+  <a href="../index.html">🏠 回首页</a>
+</div>
+
+</div>
+
+<div class="footer">
+  <p>🚀 每日Py · Day 12 — Socket 网络编程</p>
+  <p style="margin-top:6px"><span style="color:var(--yellow)">Python</span> × <span style="color:var(--accent)">C++</span> · 底层 API 几乎一样，开发效率天差地别</p>
+</div>
+
+</body>
+</html>
